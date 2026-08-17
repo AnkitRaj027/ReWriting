@@ -23,7 +23,7 @@ export default function AIAssistant({ state, gainXP, writeLog }: AIAssistantProp
     {
       id: 'm_init',
       sender: 'ai',
-      text: `🤖 **NEXUS AI COGNITIVE CORE ONLINE**\n\nGreetings, Operator **${state.profile.name}**. I am your personal growth LLM helper. I have access to your telemetry (Level: ${state.profile.level}, Habits: ${state.habits.length} active, Directives: ${state.goals.length} active).\n\nHow can I optimize your routines or review your learning modules today?`,
+      text: `🤖 **REWIRE AI COGNITIVE CORE ONLINE**\n\nGreetings, Operator **${state.profile.name}**. I am your personal growth LLM helper. I have access to your telemetry (Level: ${state.profile.level}, Habits: ${state.habits.length} active, Directives: ${state.goals.length} active).\n\nHow can I optimize your routines or review your learning modules today?`,
       timestamp: new Date().toLocaleTimeString().substring(0, 5)
     }
   ]);
@@ -78,7 +78,7 @@ export default function AIAssistant({ state, gainXP, writeLog }: AIAssistantProp
     // Formulate message history for the model, prepending a system prompt for structured formatting
     const systemPrompt = {
       role: 'system' as const,
-      content: `You are the NEXUS AI Core, a helpful, friendly, and highly intelligent AI companion. 
+      content: `You are the Rewire AI Core, a helpful, friendly, and highly intelligent AI companion. 
 Maintain a conversational, natural, and human-like tone, being supportive and engaging.
 Keep your responses well-structured, clear, and easy to read. Always use markdown styling like headers, bold text, and bullet points where helpful.
 You can answer any normal queries, general knowledge questions, coding prompts, and productivity discussions. Do not limit yourself to the web page state or growth metrics, but feel free to reference them if relevant to the operator's query.`
@@ -129,7 +129,7 @@ You can answer any normal queries, general knowledge questions, coding prompts, 
       {
         id: `m_init_${Date.now()}`,
         sender: 'ai',
-        text: `NEXUS AI database registers flushed. Cognitive core ready for new prompts.`,
+        text: `Rewire AI database registers flushed. Cognitive core ready for new prompts.`,
         timestamp: new Date().toLocaleTimeString().substring(0, 5)
       }
     ]);
@@ -202,7 +202,7 @@ You can answer any normal queries, general knowledge questions, coding prompts, 
         <div className="flex items-center justify-between border-b border-cyber-cyan/15 pb-2 mb-4">
           <div className="flex items-center space-x-2 font-mono text-xs text-cyber-cyan font-bold tracking-wider">
             <Bot size={15} className="animate-bounce" />
-            <span>NEXUS AI OPERATOR TERMINAL</span>
+            <span>REWIRE AI OPERATOR TERMINAL</span>
           </div>
           <div className="flex items-center space-x-1.5 font-mono text-[9px]">
             <span className="h-2 w-2 rounded-full bg-cyber-green animate-ping" />

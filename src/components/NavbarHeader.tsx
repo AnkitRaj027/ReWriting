@@ -95,7 +95,7 @@ export default function NavbarHeader({
     { id: 'skills', label: getTranslation(vocab, 'goalsTitle') },
     { id: 'vault', label: getTranslation(vocab, 'vaultTitle') },
     { id: 'english', label: 'English Coach' },
-    { id: 'assistant', label: 'Nexus AI' }
+    { id: 'assistant', label: 'Rewire AI' }
   ];
 
   const handleTabChange = (tabId: string) => {

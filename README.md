@@ -13,7 +13,7 @@ JavaCity is an immersive, cyber-aesthetic study station and AI English learning 
 *   **`CommandCenter.tsx` (Academic Planner)**: Interactive project and exam scheduler allowing you to track due dates, milestones, and task checklists.
 *   **`MindVault.tsx` (Study Journals)**: Markdown-ready journal editor for daily logs, review sheets, and personal thought archives.
 *   **`HabitsView.tsx` (Habituation Tracker)**: Grid visualization tracker for completing daily recurring habits (e.g. Code practice, Gym, Reading) with automatic streak tallies.
-*   **`AIAssistant.tsx` (Nexus AI Chatbot)**: Conversational companion tutor powered by Mistral AI, ready to assist with programming questions, text translation, or writing critiques.
+*   **`AIAssistant.tsx` (Rewire AI Chatbot)**: Conversational companion tutor powered by Mistral AI, ready to assist with programming questions, text translation, or writing critiques.
 *   **`DiagnosticsPanel.tsx` (Diagnostics Board)**: Monitor active workspace indicators, API node latency, memory indicators, and simulated database status.
 *   **`TerminalConsole.tsx` (Console logs)**: Custom logger printing real-time event updates, XP yields, timer notifications, and error warnings.
 
