@@ -1,69 +1,257 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useNexusState } from '../hooks/useNexusState';
+import NavbarHeader from '../components/NavbarHeader';
+import CommandCenter from '../components/CommandCenter';
+import HabitsView from '../components/HabitsView';
+import FocusChamber from '../components/FocusChamber';
+import MissionControl from '../components/MissionControl';
+import MindVault from '../components/MindVault';
+import EnglishCoach from '../components/EnglishCoach';
+import { HudAudio } from '../utils/HudAudio';
 
 export default function Home() {
+  const {
+    isHydrated,
+    state,
+    toggleHabit,
+    addHabit,
+    deleteHabit,
+    gainXP,
+    logFocusSession,
+    toggleGoalSubtask,
+    addGoal,
+    deleteGoal,
+    saveReflection,
+    saveMoodEnergy,
+    addNote,
+    editNote,
+    deleteNote,
+    exportState,
+    importState,
+    resetToDefault,
+    writeLog,
+    clearDiagnostics,
+    updateSettings,
+    updateProfileName
+  } = useNexusState();
+
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [showWelcomeSetup, setShowWelcomeSetup] = useState(false);
+  const [setupName, setSetupName] = useState('');
+
+  // Initial Onboarding Welcome Prompt
+  useEffect(() => {
+    if (isHydrated && (state.profile.name === "HACKER OPERATOR" || state.profile.name === "NEW USER")) {
+      setShowWelcomeSetup(true);
+    }
+  }, [isHydrated, state.profile.name]);
+
+  const handleSetupSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setupName.trim()) return;
+    updateProfileName(setupName.trim());
+    setShowWelcomeSetup(false);
+    HudAudio.playSuccess();
+  };
+
+  // Theme definitions (updated cyan purple to high contrast electric violet)
+  const themeVariables: Record<string, Record<string, string>> = {
+    cyan: {
+      '--color-cyber-cyan': '#00F0FF',
+      '--color-cyber-purple': '#BF40FF',
+      '--shadow-glow-cyan': '0 0 10px rgba(0, 240, 255, 0.4)',
+      '--shadow-glow-purple': '0 0 10px rgba(191, 64, 255, 0.4)'
+    },
+    green: {
+      '--color-cyber-cyan': '#00FF66',
+      '--color-cyber-purple': '#009933',
+      '--shadow-glow-cyan': '0 0 10px rgba(0, 255, 102, 0.4)',
+      '--shadow-glow-purple': '0 0 10px rgba(0, 153, 51, 0.4)'
+    },
+    crimson: {
+      '--color-cyber-cyan': '#FF0055',
+      '--color-cyber-purple': '#990022',
+      '--shadow-glow-cyan': '0 0 10px rgba(255, 0, 85, 0.4)',
+      '--shadow-glow-purple': '0 0 10px rgba(153, 0, 34, 0.4)'
+    },
+    amber: {
+      '--color-cyber-cyan': '#FFB000',
+      '--color-cyber-purple': '#AA5500',
+      '--shadow-glow-cyan': '0 0 10px rgba(255, 176, 0, 0.4)',
+      '--shadow-glow-purple': '0 0 10px rgba(170, 85, 0, 0.4)'
+    },
+    purple: {
+      '--color-cyber-cyan': '#a855f7',
+      '--color-cyber-purple': '#ec4899',
+      '--shadow-glow-cyan': '0 0 10px rgba(168, 85, 247, 0.4)',
+      '--shadow-glow-purple': '0 0 10px rgba(236, 72, 153, 0.4)'
+    }
+  };
+
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#06090e] font-mono text-xs text-cyber-cyan tracking-widest space-y-4">
+        <div className="crt-overlay" />
+        <div className="crt-scanline animate-scanline" />
+        <div className="w-12 h-12 border-2 border-t-transparent border-cyber-cyan rounded-full animate-spin shadow-[0_0_10px_rgba(0,240,255,0.4)]" />
+        <div className="animate-pulse">Loading ReWriting core status...</div>
+      </div>
+    );
+  }
+
+  const activeThemeVars = themeVariables[state.settings.theme] || themeVariables.cyan;
+
+  const getFontSize = () => {
+    switch (state.settings.fontSize) {
+      case 'sm': return '0.95rem';
+      case 'lg': return '1.22rem';
+      default: return '1.08rem';
+    }
+  };
+
+  const renderActiveView = () => {
+    switch (activeTab) {
+      case 'home':
+        return (
+          <CommandCenter
+            state={state}
+            toggleHabit={toggleHabit}
+            gainXP={(amt) => gainXP(amt)}
+            writeLog={writeLog}
+            clearDiagnostics={clearDiagnostics}
+            setActiveTab={setActiveTab}
+          />
+        );
+      case 'habits':
+        return (
+          <HabitsView
+            habits={state.habits}
+            settings={state.settings}
+            toggleHabit={toggleHabit}
+            addHabit={addHabit}
+            deleteHabit={deleteHabit}
+          />
+        );
+      case 'focus':
+        return (
+          <FocusChamber
+            settings={state.settings}
+            focusSessions={state.focusSessions}
+            updateSettings={updateSettings}
+            logFocusSession={logFocusSession}
+            writeLog={writeLog}
+            exportState={exportState}
+            importState={importState}
+            resetToDefault={resetToDefault}
+          />
+        );
+      case 'skills': // Goals checklist view
+        return (
+          <MissionControl
+            goals={state.goals}
+            settings={state.settings}
+            toggleGoalSubtask={toggleGoalSubtask}
+            addGoal={addGoal}
+            deleteGoal={deleteGoal}
+          />
+        );
+      case 'vault':
+        return (
+          <MindVault
+            moodLogs={state.moodLogs}
+            reflectionLogs={state.reflectionLogs}
+            notes={state.notes}
+            settings={state.settings}
+            saveReflection={saveReflection}
+            saveMoodEnergy={saveMoodEnergy}
+            addNote={addNote}
+            editNote={editNote}
+            deleteNote={deleteNote}
+          />
+        );
+      case 'english':
+        return (
+          <EnglishCoach
+            gainXP={gainXP}
+            writeLog={writeLog}
+          />
+        );
+      default:
+        return (
+          <div className="text-center font-mono text-xs text-cyber-pink py-12">
+            Error: viewport routing fault.
+          </div>
+        );
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div 
+      className="min-h-screen flex flex-col bg-[#06090e] bg-grid-move relative transition-all duration-300"
+      style={{
+        ...activeThemeVars as React.CSSProperties,
+        fontSize: getFontSize()
+      }}
+    >
+      <div className="crt-overlay" />
+      <div className="crt-scanline animate-scanline" />
+
+      {/* Header with theme toggler */}
+      <NavbarHeader 
+        profile={state.profile} 
+        settings={state.settings}
+        updateSettings={updateSettings}
+        updateProfileName={updateProfileName}
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+      />
+
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        {renderActiveView()}
       </main>
+
+      {/* Welcome Onboarding Setup Modal Overlay */}
+      {showWelcomeSetup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-obsidian-deep/95 backdrop-blur-md">
+          <div className="cyber-card p-8 rounded-lg border-2 border-cyber-cyan shadow-glow-cyan max-w-md w-full mx-4 space-y-6 font-mono text-[11px] text-gray-300">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded border-2 border-cyber-cyan flex items-center justify-center mx-auto shadow-glow-cyan bg-cyber-cyan/5">
+                <span className="text-xl animate-pulse text-cyber-cyan">RW</span>
+              </div>
+              <h2 className="text-lg font-bold text-white tracking-widest uppercase">Welcome to ReWriting</h2>
+              <p className="text-gray-500">Configure your personal growth tracker profile name.</p>
+            </div>
+
+            <form onSubmit={handleSetupSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-cyber-cyan block font-bold">PLEASE ENTER YOUR NAME</label>
+                <input
+                  type="text"
+                  required
+                  value={setupName}
+                  onChange={(e) => setSetupName(e.target.value)}
+                  placeholder="e.g. Operator Name"
+                  className="w-full bg-obsidian-deep border border-cyber-cyan/35 rounded px-3 py-2 text-cyber-cyan text-xs outline-none focus:border-cyber-cyan font-bold"
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2 bg-cyber-cyan hover:bg-cyber-cyan/80 text-obsidian-deep font-bold rounded cursor-pointer transition-colors"
+              >
+                LOG INTO SYSTEM
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <footer className="py-4 border-t border-cyber-cyan/10 bg-obsidian-deep/50 text-center font-mono text-[8px] text-gray-600 tracking-widest uppercase">
+        ReWriting Core - Synchronized and Operational
+      </footer>
     </div>
   );
 }
