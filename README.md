@@ -1,83 +1,75 @@
-# 🌐 JavaCity: ReWriting & AI English Coach Classroom
+# 🪐 JavaCity: Cybernetic Study Hub & AI English Coach
 
-JavaCity is a premium, gamified educational dashboard for mastering English grammar, writing registers, and conversational fluency. Powered by Next.js and the powerful **Mistral AI (`mistral-small-latest`)** LLM engine, it provides custom-tailored feedback loops and real-time syntax checking.
+JavaCity is an immersive, cyber-aesthetic study station and AI English learning classroom built with **Next.js (App Router)**, **TailwindCSS**, and the **Mistral AI (`mistral-small-latest`)** LLM. It aggregates task management, progress journals, pomodoro tracking, and gamified AI language teaching into a unified retro-futuristic console.
 
 ---
 
-## 🚀 Features
+## 🗺️ Application Architecture
 
-### 1. 👩‍🏫 AI English Coach (Advanced Classroom)
-A fully dynamic workspace containing nine advanced training modules that adapt instantly to user-defined topics:
+### 1. 🎛️ Dashboard Core Components (`src/components/`)
+*   **`MissionControl.tsx` (Landing Control)**: The main overview deck displaying real-time statistics (XP levels, study streak counts, productivity scores), project goals, quick links, and active tasks.
+*   **`EnglishCoach.tsx` (AI Language Classroom)**: Upgraded advanced learning tracks containing custom curriculum synthesizers, CEFR grading metrics, tone filter rewrites, 3D flip vocab cards, and in-character roleplay simulations with live satisfaction meters.
+*   **`FocusChamber.tsx` (Ambient Timer Core)**: Integrates customizable Pomodoro blocks, dynamic work-break loops, and system log console outputs.
+*   **`CommandCenter.tsx` (Academic Planner)**: Interactive project and exam scheduler allowing you to track due dates, milestones, and task checklists.
+*   **`MindVault.tsx` (Study Journals)**: Markdown-ready journal editor for daily logs, review sheets, and personal thought archives.
+*   **`HabitsView.tsx` (Habituation Tracker)**: Grid visualization tracker for completing daily recurring habits (e.g. Code practice, Gym, Reading) with automatic streak tallies.
+*   **`AIAssistant.tsx` (Nexus AI Chatbot)**: Conversational companion tutor powered by Mistral AI, ready to assist with programming questions, text translation, or writing critiques.
+*   **`DiagnosticsPanel.tsx` (Diagnostics Board)**: Monitor active workspace indicators, API node latency, memory indicators, and simulated database status.
+*   **`TerminalConsole.tsx` (Console logs)**: Custom logger printing real-time event updates, XP yields, timer notifications, and error warnings.
 
-*   **Grammar, Vocab & Idiom Core Quizzes**:
-    *   *AI Synthesis*: Input any custom topic (e.g. *"Passive Voice"*, *"Aerospace Terms"*) to generate a custom 5-question multiple choice quiz deck.
-    *   *🔄 Practice Similar Drill*: Instantly call the AI to generate a similar question to reinforce concepts.
-    *   *✍️ Writing Sandbox*: Type a custom sentence applying the rule inside the feedback card to receive an inline syntax check.
-*   **Teach Me a Topic**:
-    *   Generates a 3-part structured curriculum (Concept Guide, Quiz, Writing Challenge) on any subject.
-    *   *persistent Reference Sheet*: A split-column view displays the rules cheat sheet constantly on the left while you solve active quizzes on the right.
-*   **Daily Essay Challenges**:
-    *   *Standardized Slider Scorecard*: Evaluates essays based on **Coherence & Cohesion**, **Lexical Resource (Vocab)**, and **Grammatical Range**.
-    *   *CEFR Grading*: Automatically outputs CEFR benchmark levels (A1, A2, B1, B2, C1, C2) alongside a natural rewrite of your text.
-*   **Vocabulary Flashcards (3D-Flip)**:
-    *   Decks generated in real-time matching study themes.
-    *   *3D Rotation Animation*: Flip cards to reveal pronunciations, examples, and synonyms.
-    *   *Test Me Sandbox*: Flip card into a sentence builder form to verify semantic and grammatical word usage.
-*   **Free-Roam AI Roleplay (Gamified Sim)**:
-    *   *Mood Temperaments*: Engage in conversation presets or custom roleplay topics with characters set to **Friendly**, **Neutral**, or **Stressed/Demanding** modes.
-    *   *Live Satisfaction Bar*: A progress meter (0-100%) shifts based on the politeness of your inputs (e.g. modal auxiliary verbs) and spelling accuracy.
-*   **Free Writing Practice**:
-    *   *Tone Filters*: Choose between **Professional**, **Casual**, **Academic**, or **Creative** styles. Emily checks your spelling and rewrites the sentence to match that exact register.
+### 2. ⚡ Global State System (`src/hooks/`)
+*   **`useNexusState.ts`**: Unified local-storage synchronized hook. It coordinates:
+    *   Experience points (XP) calculations and user leveling formulas.
+    *   Persistent lists for projects, exams, journals, habits, and console log archives.
+    *   Activity logs mapping focus session metrics.
 
-### 2. ⚡ Focus Chamber (Gamification Hub)
-*   **Pomodoro Timer**: Work intervals with integrated HUD audio warnings.
-*   **XP Progress Engine**: Earn experience points for correct answers and completed lessons.
-*   **Live Logger**: Dynamic terminal feed logging XP rewards, scenario status, and AI assessment alerts.
-
-### 3. 🤖 Nexus AI
-*   A responsive, human-like tutoring assistant proxy to ask general grammar questions, request translations, or practice general writing.
+### 3. 🔊 System Utilities (`src/utils/`)
+*   **`HudAudio.ts`**: Web Audio API player. Generates synthesizer sound alerts on-the-fly (with no static audio assets required) for:
+    *   Dashboard navigation clicks
+    *   Successful challenge bells
+    *   Warning alerts/buzzers
+    *   Startup engine animations
+*   **`glossary.ts`**: Predefined static structures mapping core lists for study terms and descriptions.
 
 ---
 
 ## 🛠️ Technology Stack
-*   **Framework**: [Next.js](https://nextjs.org/) (App Router & Client/Server Node Modules)
-*   **Styling**: Vanilla TailwindCSS & Custom 3D perspective transition utility tokens
-*   **State Management**: React state hooks & custom Nexus State hooks
-*   **Backend Node**: Mistral API Client proxy (`/api/chat`)
-*   **Audio Core**: HTML5 Audio synthesizer context class
+*   **Framework**: [Next.js](https://nextjs.org/) (React, App Router)
+*   **Styling**: Vanilla TailwindCSS & 3D rotation transition stylesheets
+*   **Backend Node**: Next.js route handlers mapping to `/api/chat`
+*   **AI Engine**: Mistral API Client Client (`mistral-small-latest`)
+*   **Icons**: Lucide React
+*   **Audio Core**: Synthesized HTML5 Web Audio Context API
 
 ---
 
 ## ⚙️ Developer Setup
 
-### 1. Prerequisites
-Ensure you have Node.js (v18+) installed on your machine.
-
-### 2. Clone the Repository
+### 1. Clone the Project
 ```bash
 git clone https://github.com/AnkitRaj027/ReWriting.git
 cd ReWriting
 ```
 
-### 3. Setup Environment Variables
-Create a `.env` file in the root directory (do not commit this to Git; `.gitignore` is pre-configured to keep it secure):
+### 2. Configure Local Secrets
+Create a `.env` file in the root directory (Git ignore rules are pre-configured to keep this private):
 ```env
 MISTRAL_API_KEY=your_mistral_api_key_here
 ```
 
-### 4. Install Dependencies
+### 3. Install NPM Node Dependencies
 ```bash
 npm install
 ```
 
-### 5. Start Development Server
+### 4. Boot Dev Environment Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to view the classroom dashboard.
+Navigate to [http://localhost:3000](http://localhost:3000) to load the console.
 
-### 6. Static Compilation Check
-Verify the project compiles with no warnings or TypeScript errors:
+### 5. Static Validation Check
+Compile and check the project for TypeScript type conflicts:
 ```bash
 npx tsc --noEmit
 ```
