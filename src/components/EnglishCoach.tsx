@@ -796,7 +796,7 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
       </div>
 
       {/* Main Chat Interface or Custom Scenario Creator form */}
-      <div className="lg:col-span-3 cyber-card p-5 rounded-lg border-cyber-cyan/25 flex flex-col h-[520px]">
+      <div className="lg:col-span-3 cyber-card p-5 rounded-lg border-cyber-cyan/25 flex flex-col h-[450px] sm:h-[520px] lg:h-[600px]">
         {showCreateForm ? (
           /* Smart AI Topic Generator Panel */
           <form onSubmit={handleCreateAIScenario} className="flex-1 flex flex-col justify-center space-y-6 font-mono text-[10px] max-w-sm mx-auto w-full">

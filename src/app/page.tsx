@@ -208,7 +208,7 @@ export default function Home() {
         setActiveTab={setActiveTab} 
       />
 
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="flex-grow max-w-[1500px] mx-auto px-4 md:px-6 py-4 md:py-6 w-full flex flex-col justify-start">
         {renderActiveView()}
       </main>
 

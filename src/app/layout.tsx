@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NEXUS // Personal Growth HUD",
-  description: "Futuristic dark-theme cyberpunk personal growth dashboard. Track daily habits, manage focus sessions, log biometric energy grids, and level up your RPG skill trees.",
+  title: "ReWriting MYself",
+  description: "Your futuristic personal growth dashboard. Track daily habits, manage focus sessions, write reflective notes, and learn English with your automated coach.",
 };
 
 export default function RootLayout({

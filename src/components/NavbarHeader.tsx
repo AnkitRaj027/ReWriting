@@ -118,7 +118,7 @@ export default function NavbarHeader({
 
   return (
     <header className="border-b border-cyber-cyan/20 bg-obsidian-dark/95 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div className="max-w-[1500px] mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
         {/* Brand */}
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded border-2 border-cyber-cyan flex items-center justify-center shadow-[0_0_8px_rgba(0,240,255,0.4)] bg-cyber-cyan/5">
@@ -247,7 +247,7 @@ export default function NavbarHeader({
 
       {/* Navigation menu */}
       <nav className="hidden lg:block border-t border-cyber-cyan/10 bg-obsidian-deep/60">
-        <div className="max-w-7xl mx-auto px-4 flex space-x-1">
+        <div className="max-w-[1500px] mx-auto px-4 flex space-x-1">
           {navItems.map((item) => (
             <button
               key={item.id}
