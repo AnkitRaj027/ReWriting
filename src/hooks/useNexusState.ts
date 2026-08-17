@@ -74,6 +74,7 @@ export interface HudSettings {
   volume: number;
   timerTickSound: boolean;
   timerMode: 'circular' | 'linear';
+  fontFamily?: 'fira' | 'share-tech' | 'orbitron' | 'vt323' | 'space-mono' | 'jetbrains';
 }
 
 export interface NexusState {
@@ -177,7 +178,8 @@ const DEFAULT_STATE: NexusState = {
     vocabulary: 'personal',
     volume: 0.5,
     timerTickSound: false,
-    timerMode: 'circular'
+    timerMode: 'circular',
+    fontFamily: 'fira'
   }
 };
 

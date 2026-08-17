@@ -9,6 +9,7 @@ import FocusChamber from '../components/FocusChamber';
 import MissionControl from '../components/MissionControl';
 import MindVault from '../components/MindVault';
 import EnglishCoach from '../components/EnglishCoach';
+import AIAssistant from '../components/AIAssistant';
 import { HudAudio } from '../utils/HudAudio';
 
 export default function Home() {
@@ -111,6 +112,41 @@ export default function Home() {
     }
   };
 
+  const getFontFamilyVariables = () => {
+    switch (state.settings.fontFamily) {
+      case 'share-tech':
+        return {
+          '--font-sans': "'Share Tech Mono', monospace",
+          '--font-mono': "'Share Tech Mono', monospace"
+        };
+      case 'orbitron':
+        return {
+          '--font-sans': "'Orbitron', sans-serif",
+          '--font-mono': "'Fira Code', monospace"
+        };
+      case 'vt323':
+        return {
+          '--font-sans': "'VT323', monospace",
+          '--font-mono': "'VT323', monospace"
+        };
+      case 'space-mono':
+        return {
+          '--font-sans': "'Space Mono', monospace",
+          '--font-mono': "'Space Mono', monospace"
+        };
+      case 'jetbrains':
+        return {
+          '--font-sans': "'JetBrains Mono', monospace",
+          '--font-mono': "'JetBrains Mono', monospace"
+        };
+      default:
+        return {
+          '--font-sans': "'Plus Jakarta Sans', sans-serif",
+          '--font-mono': "'Fira Code', monospace"
+        };
+    }
+  };
+
   const renderActiveView = () => {
     switch (activeTab) {
       case 'home':
@@ -178,6 +214,14 @@ export default function Home() {
             writeLog={writeLog}
           />
         );
+      case 'assistant':
+        return (
+          <AIAssistant
+            state={state}
+            gainXP={gainXP}
+            writeLog={writeLog}
+          />
+        );
       default:
         return (
           <div className="text-center font-mono text-xs text-cyber-pink py-12">
@@ -192,6 +236,8 @@ export default function Home() {
       className="min-h-screen flex flex-col bg-[#06090e] bg-grid-move relative transition-all duration-300"
       style={{
         ...activeThemeVars as React.CSSProperties,
+        ...getFontFamilyVariables() as React.CSSProperties,
+        fontFamily: 'var(--font-sans)',
         fontSize: getFontSize()
       }}
     >

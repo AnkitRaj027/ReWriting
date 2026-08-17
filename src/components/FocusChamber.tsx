@@ -390,6 +390,35 @@ export default function FocusChamber({
                   </div>
                 </div>
 
+                {/* Futuristic Fonts Switcher */}
+                <div className="space-y-1.5 pt-1.5 border-t border-obsidian-light">
+                  <span className="text-gray-400 block font-bold">Futuristic Fonts</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {([
+                      { id: 'fira', label: 'Fira Code' },
+                      { id: 'share-tech', label: 'Share Tech' },
+                      { id: 'orbitron', label: 'Orbitron' },
+                      { id: 'vt323', label: 'VT323' },
+                      { id: 'space-mono', label: 'Space Mono' },
+                      { id: 'jetbrains', label: 'JetBrains' }
+                    ] as const).map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => { HudAudio.playClick(); updateSettings({ fontFamily: f.id }); }}
+                        className={`py-1 border text-[8px] rounded uppercase cursor-pointer ${
+                          settings.fontFamily === f.id || (!settings.fontFamily && f.id === 'fira')
+                            ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5 font-bold' 
+                            : 'border-obsidian-light text-gray-500 hover:border-cyber-cyan/30 hover:text-gray-300'
+                        }`}
+                        title={f.label}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Vocabulary selector */}
                 <div className="space-y-1.5 pt-1.5 border-t border-obsidian-light">
                   <span className="text-gray-400 block font-bold">Vocabulary Glossary Mode</span>
