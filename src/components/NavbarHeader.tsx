@@ -15,13 +15,13 @@ interface NavbarHeaderProps {
   setActiveTab: (tab: string) => void;
 }
 
-export default function NavbarHeader({ 
-  profile, 
-  settings, 
-  updateSettings, 
+export default function NavbarHeader({
+  profile,
+  settings,
+  updateSettings,
   updateProfileName,
-  activeTab, 
-  setActiveTab 
+  activeTab,
+  setActiveTab
 }: NavbarHeaderProps) {
   const [timeStr, setTimeStr] = useState<string>('');
   const [muted, setMuted] = useState<boolean>(false);
@@ -62,7 +62,7 @@ export default function NavbarHeader({
   };
 
   const themeCycle: ('cyan' | 'green' | 'crimson' | 'amber' | 'purple')[] = ['cyan', 'green', 'crimson', 'amber', 'purple'];
-  
+
   const handleThemeToggle = () => {
     HudAudio.playClick();
     const currentIdx = themeCycle.indexOf(settings.theme);
@@ -142,10 +142,10 @@ export default function NavbarHeader({
 
           <div className="h-6 w-px bg-cyber-cyan/10" />
 
-          {/* Click to Edit Username */}
+          { }
           <div className="min-w-[100px]">
             <span className="text-[10px] text-gray-600 block">
-              {getTranslation(vocab, 'profileLabel')} (Click to Edit)
+              {getTranslation(vocab, 'profileLabel')}
             </span>
             {isEditingName ? (
               <form onSubmit={handleNameSave} className="flex items-center space-x-1 mt-0.5">
@@ -165,7 +165,7 @@ export default function NavbarHeader({
               <button
                 onClick={() => { HudAudio.playClick(); setIsEditingName(true); }}
                 className="text-gray-200 flex items-center gap-1.5 font-bold hover:text-cyber-cyan transition-colors text-left outline-none cursor-pointer"
-                title="Click to edit name"
+                title="__"
               >
                 <User size={11} className="text-cyber-cyan" />
                 {profile.name}
@@ -204,7 +204,7 @@ export default function NavbarHeader({
               <span className="text-gray-400 font-bold">{profile.xp}/{profile.xpToNextLevel} XP</span>
             </div>
             <div className="w-full bg-obsidian-deep border border-cyber-cyan/20 h-2 rounded-full overflow-hidden p-0.5">
-              <div 
+              <div
                 className="bg-gradient-to-r from-cyber-cyan to-cyber-purple h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_8px_rgba(0,240,255,0.4)]"
                 style={{ width: `${xpPercent}%` }}
               />
@@ -222,14 +222,13 @@ export default function NavbarHeader({
           </button>
 
           {/* Sound Toggle */}
-          <button 
+          <button
             onClick={handleMuteToggle}
             onMouseEnter={() => HudAudio.playHover()}
-            className={`p-2 rounded border transition-colors cursor-pointer ${
-              muted 
-                ? 'border-cyber-pink/20 hover:border-cyber-pink text-cyber-pink hover:bg-cyber-pink/10' 
-                : 'border-cyber-cyan/20 hover:border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan/10'
-            }`}
+            className={`p-2 rounded border transition-colors cursor-pointer ${muted
+              ? 'border-cyber-pink/20 hover:border-cyber-pink text-cyber-pink hover:bg-cyber-pink/10'
+              : 'border-cyber-cyan/20 hover:border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan/10'
+              }`}
             title={muted ? 'Unmute Audio' : 'Mute Audio'}
           >
             {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
@@ -254,11 +253,10 @@ export default function NavbarHeader({
               key={item.id}
               onClick={() => handleTabChange(item.id)}
               onMouseEnter={() => HudAudio.playHover()}
-              className={`py-3 px-4 font-mono text-xs tracking-wider transition-all relative outline-none border-b-2 cursor-pointer ${
-                activeTab === item.id 
-                  ? 'text-cyber-cyan border-cyber-cyan bg-cyber-cyan/5 font-bold shadow-[inset_0_0_10px_rgba(0,240,255,0.05)]' 
-                  : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-cyber-cyan/40 hover:bg-obsidian-light/35'
-              }`}
+              className={`py-3 px-4 font-mono text-xs tracking-wider transition-all relative outline-none border-b-2 cursor-pointer ${activeTab === item.id
+                ? 'text-cyber-cyan border-cyber-cyan bg-cyber-cyan/5 font-bold shadow-[inset_0_0_10px_rgba(0,240,255,0.05)]'
+                : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-cyber-cyan/40 hover:bg-obsidian-light/35'
+                }`}
             >
               {item.label}
               {activeTab === item.id && (
@@ -281,11 +279,10 @@ export default function NavbarHeader({
               key={item.id}
               onClick={() => handleTabChange(item.id)}
               onMouseEnter={() => HudAudio.playHover()}
-              className={`w-full text-left py-2.5 px-3 rounded tracking-wider block transition-colors cursor-pointer ${
-                activeTab === item.id 
-                  ? 'text-cyber-cyan bg-cyber-cyan/10 font-bold border-l-2 border-cyber-cyan' 
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-obsidian-light/50'
-              }`}
+              className={`w-full text-left py-2.5 px-3 rounded tracking-wider block transition-colors cursor-pointer ${activeTab === item.id
+                ? 'text-cyber-cyan bg-cyber-cyan/10 font-bold border-l-2 border-cyber-cyan'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-obsidian-light/50'
+                }`}
             >
               {item.label}
             </button>
