@@ -4,6 +4,54 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, BookOpen, RefreshCw, MessageSquare, Award, Coffee, Briefcase, MapPin, Plus, Trash2, Settings2, ChevronLeft, ChevronRight, Play, Sparkles } from 'lucide-react';
 import { HudAudio } from '../utils/HudAudio';
 
+function isAnswerCorrect(selectedOption: string, correctOption: string, optionsList: string[]): boolean {
+  if (!selectedOption || !correctOption) return false;
+  
+  const cleanSelected = selectedOption.trim().toLowerCase();
+  const cleanCorrect = correctOption.trim().toLowerCase();
+  
+  // 1. Direct match (case-insensitive)
+  if (cleanSelected === cleanCorrect) return true;
+
+  // 2. Strip prefixes (e.g. "Option A:", "A.", "1.", "option a -") from both candidate strings
+  const stripPrefix = (str: string) => {
+    let s = str.replace(/^(option\s+[a-e\d][:.-]?\s*)/i, '');
+    s = s.replace(/^([a-e\d][:.)-]\s*)/i, '');
+    return s.trim().toLowerCase();
+  };
+
+  const strippedSelected = stripPrefix(selectedOption);
+  const strippedCorrect = stripPrefix(correctOption);
+  if (strippedSelected === strippedCorrect && strippedSelected.length > 0) return true;
+
+  // 3. Match by index
+  // Check if correctOption is pointing to an index, e.g. "a", "b", "c", "d", "option a", "option 1"
+  const cleanOptions = optionsList.map(o => o.trim().toLowerCase());
+  const selectedIndex = cleanOptions.indexOf(cleanSelected);
+
+  if (selectedIndex !== -1) {
+    const letters = ['a', 'b', 'c', 'd', 'e'];
+    if (letters.includes(cleanCorrect)) {
+      if (letters.indexOf(cleanCorrect) === selectedIndex) return true;
+    }
+    
+    if (cleanCorrect.startsWith('option ')) {
+      const rest = cleanCorrect.replace('option ', '').trim();
+      if (letters.includes(rest)) {
+        if (letters.indexOf(rest) === selectedIndex) return true;
+      }
+      const num = parseInt(rest, 10);
+      if (!isNaN(num) && num - 1 === selectedIndex) return true;
+    }
+  }
+
+  // 4. Substring check
+  if (strippedCorrect.includes(strippedSelected) && strippedSelected.length > 2) return true;
+  if (strippedSelected.includes(strippedCorrect) && strippedCorrect.length > 2) return true;
+
+  return false;
+}
+
 interface Message {
   id: string;
   sender: 'teacher' | 'student';
@@ -70,6 +118,7 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
   const [idiomTopic, setIdiomTopic] = useState('');
   const [dynamicQuizzes, setDynamicQuizzes] = useState<any[]>([]);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
+  const [seenQuestions, setSeenQuestions] = useState<string[]>([]);
 
   // Teach Me a Topic State
   const [lessonTopic, setLessonTopic] = useState('');
@@ -419,7 +468,7 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
 
     const currentTeacherMsg = [...chatHistory].reverse().find(m => m.sender === 'teacher');
     if (currentTeacherMsg && currentTeacherMsg.correctOption) {
-      const isCorrect = optionText === currentTeacherMsg.correctOption;
+      const isCorrect = isAnswerCorrect(optionText, currentTeacherMsg.correctOption, currentTeacherMsg.options || []);
 
       // Handle daily conversation track logic separately
       if (activeTrack === 'conversation') {
@@ -711,7 +760,11 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
     const targetTopic = topicInput.trim();
 
     try {
-      const prompt = `Generate a 3-step interactive English conversation practice dialogue about the topic: "${targetTopic}".
+      const excludePhrase = seenQuestions.length > 0 
+        ? `\nCRITICAL: Do NOT generate any of the following questions/scenarios, as the student has already completed them:\n${seenQuestions.slice(-15).map(q => `- "${q}"`).join('\n')}` 
+        : '';
+
+      const prompt = `Generate a 3-step interactive English conversation practice dialogue about the topic: "${targetTopic}".${excludePhrase}
       Respond ONLY with a valid JSON object matching the schema below. Do not wrap the response in markdown formatting or backticks. It must be directly parseable.
 
       Schema:
@@ -720,15 +773,15 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
         "steps": [
           {
             "text": "Emily: 'First line of the dialogue, introduce the scenario and ask a question/make a statement'",
-            "options": ["Option A (the most polite/correct/natural choice)", "Option B (grammatically incorrect or rude)", "Option C (awkward or unnatural syntax)"],
-            "answer": "Option A",
-            "explain": "A brief explanation of why Option A is best and what grammatical/pragmatic errors were present in the other options."
+            "options": ["Polite option text", "Rude/incorrect option text", "Awkward option text"],
+            "answer": "Polite option text",
+            "explain": "A brief explanation of why the correct option is best and what errors were present in the other options. The 'answer' field must EXACTLY match one of the items in the 'options' array."
           },
           {
             "text": "Emily: 'Second line of the dialogue, following up on the choice and asking the next question/statement'",
-            "options": ["Option D (the most polite/correct/natural choice)", "Option E (rude or grammar error)", "Option F (awkward or typo-ridden)"],
-            "answer": "Option D",
-            "explain": "Explanation of why Option D is correct."
+            "options": ["Second polite option text", "Second incorrect option text", "Second awkward option text"],
+            "answer": "Second polite option text",
+            "explain": "Explanation of why the correct option is correct. The 'answer' field must EXACTLY match one of the items in the 'options' array."
           },
           {
             "text": "Emily: 'Final wrap up statement or friendly closing statement.'"
@@ -765,6 +818,13 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
 
       if (!steps || steps.length < 3) {
         throw new Error("Invalid structure returned by AI core.");
+      }
+
+      // Track seen questions
+      const sceneSteps = generated.steps;
+      if (sceneSteps && sceneSteps.length > 0) {
+        const newSeen = sceneSteps.map((s: any) => s.text).filter(Boolean);
+        setSeenQuestions(prev => [...prev, ...newSeen]);
       }
 
       const newScenario: CustomScenario = {
@@ -949,9 +1009,13 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
     setScore(0);
     setAnsweredCount(0);
 
+    const excludePhrase = seenQuestions.length > 0 
+      ? `\nCRITICAL: Do NOT generate any of the following questions/words/idioms, as the student has already completed them:\n${seenQuestions.slice(-15).map(q => `- "${q}"`).join('\n')}` 
+      : '';
+
     let prompt = '';
     if (track === 'grammar') {
-      prompt = `Generate a customized 5-question multiple choice English grammar quiz about: "${topic}".
+      prompt = `Generate a customized 5-question multiple choice English grammar quiz about: "${topic}".${excludePhrase}
       Each question must test the student's mastery of this specific rule.
       Respond ONLY with a valid JSON object matching this schema. Do not wrap the response in markdown formatting or backticks.
       
@@ -960,14 +1024,14 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
         "quizzes": [
           {
             "q": "Question sentence with blank ___ or challenge",
-            "options": ["Option A", "Option B", "Option C"],
-            "answer": "Option A (must exactly match the correct option)",
-            "explain": "A brief explanation of why the correct option is right and others are wrong."
+            "options": ["Correct choice", "Incorrect choice 1", "Incorrect choice 2"],
+            "answer": "Correct choice",
+            "explain": "A brief explanation of why the correct option is right and others are wrong. The 'answer' field must EXACTLY match one of the items in the 'options' array."
           }
         ]
       }`;
     } else if (track === 'vocab') {
-      prompt = `Generate 5 customized vocabulary building questions about the subject: "${topic}".
+      prompt = `Generate 5 customized vocabulary building questions about the subject: "${topic}".${excludePhrase}
       Each word should be relevant to this topic, testing advanced vocabulary skills.
       Respond ONLY with a valid JSON object matching this schema. Do not wrap the response in markdown formatting or backticks.
       
@@ -982,12 +1046,12 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
             "q": "Practice question to test understanding (e.g. Choose the synonym for Word)",
             "options": ["Synonym", "Incorrect 1", "Incorrect 2"],
             "answer": "Synonym",
-            "explain": "Explanation of the correct answer."
+            "explain": "Explanation of the correct answer. The 'answer' field must EXACTLY match one of the items in the 'options' array."
           }
         ]
       }`;
     } else {
-      prompt = `Generate 5 customized English idioms or phrasal verbs matching the theme or context: "${topic}".
+      prompt = `Generate 5 customized English idioms or phrasal verbs matching the theme or context: "${topic}".${excludePhrase}
       Respond ONLY with a valid JSON object matching this schema. Do not wrap the response in markdown formatting or backticks.
       
       Schema:
@@ -1000,7 +1064,7 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
             "q": "Practice question to test understanding (e.g. When would you use this idiom?)",
             "options": ["Correct situation", "Incorrect 1", "Incorrect 2"],
             "answer": "Correct situation",
-            "explain": "Explanation of the idiom's origin or proper context usage."
+            "explain": "Explanation of the idiom's origin or proper context usage. The 'answer' field must EXACTLY match one of the items in the 'options' array."
           }
         ]
       }`;
@@ -1029,6 +1093,10 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
       if (!items || items.length === 0) {
         throw new Error("Invalid structure returned by AI.");
       }
+
+      // Track seen questions
+      const newSeen = items.map((item: any) => item.q || item.word || item.idiom || '').filter(Boolean);
+      setSeenQuestions(prev => [...prev, ...newSeen]);
 
       setDynamicQuizzes(items);
       gainXP(20);
@@ -1098,7 +1166,11 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
     setLessonWritingInput('');
     setLessonWritingFeedback('');
 
-    const prompt = `Generate a customized English lesson plan about the topic: "${lessonTopic.trim()}".
+    const excludePhrase = seenQuestions.length > 0 
+      ? `\nCRITICAL: Do NOT generate any of the following questions/concepts, as the student has already completed them:\n${seenQuestions.slice(-15).map(q => `- "${q}"`).join('\n')}` 
+      : '';
+
+    const prompt = `Generate a customized English lesson plan about the topic: "${lessonTopic.trim()}".${excludePhrase}
     Respond ONLY with a valid JSON object matching the schema below. Do not wrap the response in markdown formatting or backticks.
     
     Schema:
@@ -1108,21 +1180,21 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
       "questions": [
         {
           "q": "Practice question 1 testing this concept",
-          "options": ["Option A", "Option B", "Option C"],
-          "answer": "Option A",
-          "explain": "Brief explanation of the correct choice."
+          "options": ["Correct choice", "Incorrect choice 1", "Incorrect choice 2"],
+          "answer": "Correct choice",
+          "explain": "Brief explanation of the correct choice. The 'answer' field must EXACTLY match one of the items in the 'options' array."
         },
         {
           "q": "Practice question 2",
-          "options": ["Option A", "Option B", "Option C"],
-          "answer": "Option A",
-          "explain": "Explanation..."
+          "options": ["Correct choice", "Incorrect choice 1", "Incorrect choice 2"],
+          "answer": "Correct choice",
+          "explain": "Explanation... The 'answer' field must EXACTLY match one of the items in the 'options' array."
         },
         {
           "q": "Practice question 3",
-          "options": ["Option A", "Option B", "Option C"],
-          "answer": "Option A",
-          "explain": "Explanation..."
+          "options": ["Correct choice", "Incorrect choice 1", "Incorrect choice 2"],
+          "answer": "Correct choice",
+          "explain": "Explanation... The 'answer' field must EXACTLY match one of the items in the 'options' array."
         }
       ],
       "writingPrompt": "A custom writing prompt challenge asking the student to write a sentence utilizing the rule."
@@ -1146,6 +1218,13 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
       if (match) cleaned = match[0];
 
       const parsed = JSON.parse(cleaned);
+
+      // Track seen questions
+      if (parsed.questions && parsed.questions.length > 0) {
+        const newSeen = parsed.questions.map((q: any) => q.q).filter(Boolean);
+        setSeenQuestions(prev => [...prev, ...newSeen]);
+      }
+
       setActiveLesson(parsed);
       HudAudio.playSuccess();
       gainXP(20);
@@ -1601,16 +1680,21 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
     HudAudio.playClick();
     setGeneratingSimilarQuestion(true);
 
-    const prompt = `Based on this English grammar/vocabulary question: "${conceptQuestion}",
+    const excludePhrase = seenQuestions.length > 0 
+      ? `\nCRITICAL: Do NOT generate any of the following questions/concepts, as the student has already completed them:\n${seenQuestions.slice(-15).map(q => `- "${q}"`).join('\n')}` 
+      : '';
+
+    const prompt = `Based on this English grammar/vocabulary question: "${conceptQuestion}",${excludePhrase}
     generate a similar multiple-choice practice question testing the same core rule or concept.
+    The new question must be distinct and use a completely different sentence context and vocabulary than the original question (do not just repeat the original question or change one word).
     Respond ONLY with a valid JSON object matching this schema. Do not wrap the response in markdown formatting or backticks.
     
     Schema:
     {
       "q": "Similar question sentence with blank ___ or challenge",
-      "options": ["Option A", "Option B", "Option C"],
-      "answer": "Option A",
-      "explain": "Brief explanation of the correct choice."
+      "options": ["Correct choice", "Incorrect choice 1", "Incorrect choice 2"],
+      "answer": "Correct choice",
+      "explain": "Brief explanation of the correct choice. The 'answer' field must EXACTLY match one of the items in the 'options' array."
     }`;
 
     try {
@@ -1630,6 +1714,9 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
       if (match) cleaned = match[0];
 
       const parsed = JSON.parse(cleaned);
+
+      // Track seen questions
+      setSeenQuestions(prev => [...prev, conceptQuestion, parsed.q]);
 
       // Inject the similar question into chat history
       const time = new Date().toLocaleTimeString().substring(0, 5);
@@ -1988,7 +2075,7 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
                                   onClick={() => {
                                     HudAudio.playClick();
                                     setSelectedLessonAnswer(opt);
-                                    if (opt === activeLesson.questions[lessonStep - 1].answer) {
+                                    if (isAnswerCorrect(opt, activeLesson.questions[lessonStep - 1].answer, activeLesson.questions[lessonStep - 1].options)) {
                                       setLessonScore(prev => prev + 1);
                                       gainXP(20);
                                       writeLog("Lesson Practice: Correct answer! +20 XP.", "success");
@@ -2008,12 +2095,12 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
                           ) : (
                             <div className="space-y-4">
                               <div className={`p-3 rounded border text-xs ${
-                                selectedLessonAnswer === activeLesson.questions[lessonStep - 1].answer
+                                isAnswerCorrect(selectedLessonAnswer, activeLesson.questions[lessonStep - 1].answer, activeLesson.questions[lessonStep - 1].options)
                                   ? 'border-cyber-green bg-cyber-green/5 text-cyber-green'
                                   : 'border-cyber-pink bg-cyber-pink/5 text-cyber-pink'
                               }`}>
                                 <span className="font-bold block uppercase text-[9px] mb-1">
-                                  {selectedLessonAnswer === activeLesson.questions[lessonStep - 1].answer ? '🎉 Correct!' : '❌ Incorrect'}
+                                  {isAnswerCorrect(selectedLessonAnswer, activeLesson.questions[lessonStep - 1].answer, activeLesson.questions[lessonStep - 1].options) ? '🎉 Correct!' : '❌ Incorrect'}
                                 </span>
                                 <p className="mb-2">Your Answer: {selectedLessonAnswer}</p>
                                 <p className="text-gray-300">Explanation: {activeLesson.questions[lessonStep - 1].explain}</p>
