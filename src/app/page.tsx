@@ -147,90 +147,6 @@ export default function Home() {
     }
   };
 
-  const renderActiveView = () => {
-    switch (activeTab) {
-      case 'home':
-        return (
-          <CommandCenter
-            state={state}
-            toggleHabit={toggleHabit}
-            gainXP={(amt) => gainXP(amt)}
-            writeLog={writeLog}
-            clearDiagnostics={clearDiagnostics}
-            setActiveTab={setActiveTab}
-          />
-        );
-      case 'habits':
-        return (
-          <HabitsView
-            habits={state.habits}
-            settings={state.settings}
-            toggleHabit={toggleHabit}
-            addHabit={addHabit}
-            deleteHabit={deleteHabit}
-          />
-        );
-      case 'focus':
-        return (
-          <FocusChamber
-            settings={state.settings}
-            focusSessions={state.focusSessions}
-            updateSettings={updateSettings}
-            logFocusSession={logFocusSession}
-            writeLog={writeLog}
-            exportState={exportState}
-            importState={importState}
-            resetToDefault={resetToDefault}
-          />
-        );
-      case 'skills': // Goals checklist view
-        return (
-          <MissionControl
-            goals={state.goals}
-            settings={state.settings}
-            toggleGoalSubtask={toggleGoalSubtask}
-            addGoal={addGoal}
-            deleteGoal={deleteGoal}
-          />
-        );
-      case 'vault':
-        return (
-          <MindVault
-            moodLogs={state.moodLogs}
-            reflectionLogs={state.reflectionLogs}
-            notes={state.notes}
-            settings={state.settings}
-            saveReflection={saveReflection}
-            saveMoodEnergy={saveMoodEnergy}
-            addNote={addNote}
-            editNote={editNote}
-            deleteNote={deleteNote}
-          />
-        );
-      case 'english':
-        return (
-          <EnglishCoach
-            gainXP={gainXP}
-            writeLog={writeLog}
-          />
-        );
-      case 'assistant':
-        return (
-          <AIAssistant
-            state={state}
-            gainXP={gainXP}
-            writeLog={writeLog}
-          />
-        );
-      default:
-        return (
-          <div className="text-center font-mono text-xs text-cyber-pink py-12">
-            Error: viewport routing fault.
-          </div>
-        );
-    }
-  };
-
   return (
     <div 
       className="min-h-screen flex flex-col bg-[#06090e] bg-grid-move relative transition-all duration-300"
@@ -255,7 +171,72 @@ export default function Home() {
       />
 
       <main className="flex-grow max-w-[1500px] mx-auto px-4 md:px-6 py-4 md:py-6 w-full flex flex-col justify-start">
-        {renderActiveView()}
+        <div className={activeTab === 'home' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <CommandCenter
+            state={state}
+            toggleHabit={toggleHabit}
+            gainXP={(amt) => gainXP(amt)}
+            writeLog={writeLog}
+            clearDiagnostics={clearDiagnostics}
+            setActiveTab={setActiveTab}
+          />
+        </div>
+        <div className={activeTab === 'habits' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <HabitsView
+            habits={state.habits}
+            settings={state.settings}
+            toggleHabit={toggleHabit}
+            addHabit={addHabit}
+            deleteHabit={deleteHabit}
+          />
+        </div>
+        <div className={activeTab === 'focus' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <FocusChamber
+            settings={state.settings}
+            focusSessions={state.focusSessions}
+            updateSettings={updateSettings}
+            logFocusSession={logFocusSession}
+            writeLog={writeLog}
+            exportState={exportState}
+            importState={importState}
+            resetToDefault={resetToDefault}
+          />
+        </div>
+        <div className={activeTab === 'skills' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <MissionControl
+            goals={state.goals}
+            settings={state.settings}
+            toggleGoalSubtask={toggleGoalSubtask}
+            addGoal={addGoal}
+            deleteGoal={deleteGoal}
+          />
+        </div>
+        <div className={activeTab === 'vault' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <MindVault
+            moodLogs={state.moodLogs}
+            reflectionLogs={state.reflectionLogs}
+            notes={state.notes}
+            settings={state.settings}
+            saveReflection={saveReflection}
+            saveMoodEnergy={saveMoodEnergy}
+            addNote={addNote}
+            editNote={editNote}
+            deleteNote={deleteNote}
+          />
+        </div>
+        <div className={activeTab === 'english' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <EnglishCoach
+            gainXP={gainXP}
+            writeLog={writeLog}
+          />
+        </div>
+        <div className={activeTab === 'assistant' ? 'w-full flex-grow flex flex-col' : 'hidden'}>
+          <AIAssistant
+            state={state}
+            gainXP={gainXP}
+            writeLog={writeLog}
+          />
+        </div>
       </main>
 
       {/* Welcome Onboarding Setup Modal Overlay */}

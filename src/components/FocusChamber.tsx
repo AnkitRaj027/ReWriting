@@ -44,6 +44,7 @@ export default function FocusChamber({
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const endTimeRef = useRef<number | null>(null);
 
   // Sync custom timer changes when state is not running
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function FocusChamber({
         setTimeLeft(mins * 60);
         setTotalTime(mins * 60);
         setMode('work');
+        endTimeRef.current = Date.now() + (mins * 60 * 1000);
         setIsActive(true);
         writeLog(`Timer triggered via terminal input for ${mins} minutes`, 'info');
       }
@@ -74,31 +76,53 @@ export default function FocusChamber({
   // Timer Interval Tick
   useEffect(() => {
     if (isActive) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Timer finished
-            handleTimerConclude();
-            return 0;
-          }
-          // Optional ticking beep oscillator
-          if (settings.timerTickSound) {
-            HudAudio.playTick();
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      if (endTimeRef.current === null) {
+        endTimeRef.current = Date.now() + timeLeft * 1000;
+      }
+
+      const tick = () => {
+        if (endTimeRef.current !== null) {
+          const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+          
+          setTimeLeft((prev) => {
+            if (remaining <= 0) {
+              if (timerRef.current) clearInterval(timerRef.current);
+              timerRef.current = null;
+              endTimeRef.current = null;
+              handleTimerConclude();
+              return 0;
+            }
+            if (settings.timerTickSound && remaining !== prev) {
+              HudAudio.playTick();
+            }
+            return remaining;
+          });
+        }
+      };
+
+      // Run tick immediately to ensure UI responsiveness
+      tick();
+
+      timerRef.current = setInterval(tick, 200);
     } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      endTimeRef.current = null;
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [isActive, mode, settings.timerTickSound]);
 
   const handleTimerConclude = () => {
     setIsActive(false);
+    endTimeRef.current = null;
     HudAudio.playSuccess();
 
     if (mode === 'work') {
@@ -118,6 +142,11 @@ export default function FocusChamber({
 
   const handleStartPause = () => {
     HudAudio.playClick();
+    if (!isActive) {
+      endTimeRef.current = Date.now() + timeLeft * 1000;
+    } else {
+      endTimeRef.current = null;
+    }
     setIsActive(!isActive);
   };
 
