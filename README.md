@@ -1,4 +1,4 @@
-# 🪐 ReWriting Mysel
+# 🪐 ReWriting Myself
 
 It is an immersive, cyber-aesthetic study station and AI English learning classroom built with **Next.js (App Router)**, **TailwindCSS**, and the **Mistral AI (`mistral-small-latest`)** LLM. It aggregates task management, progress journals, pomodoro tracking, and gamified AI language teaching into a unified retro-futuristic console.
 
