@@ -1748,37 +1748,37 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
       <div className="lg:col-span-1 space-y-6">
         
         {/* Emily Profile Card */}
-        <div className="cyber-card p-5 rounded-lg border-cyber-cyan/20 text-center space-y-4">
-          <div className="relative w-16 h-16 mx-auto rounded-full border-2 border-cyber-cyan bg-obsidian-deep flex items-center justify-center shadow-[0_0_10px_rgba(0,240,255,0.3)]">
-            <span className="font-mono text-xl font-bold text-cyber-cyan animate-pulse">👩‍🏫</span>
-            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-cyber-green border-2 border-obsidian-dark animate-pulse" />
+        <div className="app-card p-5 text-center space-y-4">
+          <div className="relative w-14 h-14 mx-auto rounded-full border border-[#252C35] bg-[#181E26] flex items-center justify-center text-xl">
+            <span>👩‍🏫</span>
+            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#10B981] border-2 border-[#11151B]" />
           </div>
           <div>
-            <h3 className="font-bold text-sm text-white">Emily (English Coach)</h3>
-            <p className="text-[9px] font-mono text-gray-500 uppercase mt-0.5">Assigned AI Instructor</p>
+            <h3 className="font-semibold text-sm text-[#F2F4F7]">Emily</h3>
+            <p className="text-xs text-[#9AA4B2] mt-0.5">Interactive English Coach</p>
           </div>
 
-          <div className="pt-3 border-t border-cyber-cyan/10 grid grid-cols-2 gap-2 text-center font-mono text-[10px]">
-            <div className="bg-obsidian-deep p-2 rounded border border-obsidian-light">
-              <span className="text-gray-500 block text-[8px] uppercase">Accuracy</span>
-              <span className="text-cyber-cyan font-bold">
+          <div className="pt-3 border-t border-[#252C35] grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="bg-[#0D1015] p-2 rounded-lg border border-[#252C35]">
+              <span className="text-[#66707E] block text-[10px] uppercase font-medium">Accuracy</span>
+              <span className="text-[#22D3EE] font-medium text-xs">
                 {answeredCount > 0 ? `${Math.round((score / answeredCount) * 100)}%` : '100%'}
               </span>
             </div>
-            <div className="bg-obsidian-deep p-2 rounded border border-obsidian-light">
-              <span className="text-gray-500 block text-[8px] uppercase">XP Earned</span>
-              <span className="text-cyber-purple font-bold">+{score * 50}</span>
+            <div className="bg-[#0D1015] p-2 rounded-lg border border-[#252C35]">
+              <span className="text-[#66707E] block text-[10px] uppercase font-medium">XP Earned</span>
+              <span className="text-[#818CF8] font-medium text-xs">+{score * 50}</span>
             </div>
           </div>
         </div>
 
         {/* Learning Tracks navigation */}
-        <div className="cyber-card p-5 rounded-lg border-cyber-purple/20 space-y-3 font-mono text-[10px]">
-          <h4 className="text-xs text-cyber-purple font-bold tracking-wider border-b border-obsidian-light pb-2 uppercase">
+        <div className="app-card p-5 space-y-3 text-xs">
+          <h4 className="text-xs font-semibold text-[#66707E] uppercase tracking-wider border-b border-[#252C35] pb-2">
             Learning Tracks
           </h4>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {[
               { id: 'grammar', label: 'Grammar Quiz Challenge' },
               { id: 'vocab', label: 'Vocabulary Builder' },
@@ -1793,55 +1793,55 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
               <button
                 key={track.id}
                 onClick={() => { HudAudio.playClick(); setActiveTrack(track.id as any); setShowCreateForm(false); }}
-                className={`w-full text-left p-2.5 rounded border transition-colors flex items-center justify-between cursor-pointer ${
+                className={`w-full text-left p-2.5 rounded-lg border transition-colors flex items-center justify-between cursor-pointer ${
                   activeTrack === track.id && !showCreateForm
-                    ? 'border-cyber-cyan bg-cyber-cyan/5 text-cyber-cyan font-bold'
-                    : 'border-obsidian-light text-gray-400 hover:border-cyber-cyan/35 hover:text-gray-300'
+                    ? 'border-[#303844] bg-[#181E26] text-[#F2F4F7] font-medium'
+                    : 'border-transparent text-[#9AA4B2] hover:border-[#252C35] hover:bg-[#151A21] hover:text-[#F2F4F7]'
                 }`}
               >
                 <span>{track.label}</span>
-                <BookOpen size={10} className={activeTrack === track.id && !showCreateForm ? 'text-cyber-cyan' : 'text-gray-600'} />
+                <BookOpen size={12} className={activeTrack === track.id && !showCreateForm ? 'text-[#22D3EE]' : 'text-[#66707E]'} />
               </button>
             ))}
           </div>
 
           {/* Daily Conversation Scenario Toggles */}
           {activeTrack === 'conversation' && (
-            <div className="pt-3 border-t border-obsidian-light space-y-1.5">
-              <div className="flex justify-between items-center text-[9px] uppercase font-bold text-gray-500">
+            <div className="pt-3 border-t border-[#252C35] space-y-1.5">
+              <div className="flex justify-between items-center text-[11px] font-medium text-[#66707E]">
                 <span>Choose Scenario:</span>
                 <button
                   onClick={() => { HudAudio.playClick(); setShowCreateForm(!showCreateForm); }}
-                  className="text-cyber-cyan hover:underline flex items-center gap-0.5 cursor-pointer"
+                  className="text-[#22D3EE] hover:underline flex items-center gap-0.5"
                   title="Create a custom dialogue scene"
                 >
-                  <Plus size={8} /> Add Custom
+                  <Plus size={10} /> Add Custom
                 </button>
               </div>
 
               <button
                 onClick={() => { HudAudio.playClick(); setActiveScenario('cafe'); setShowCreateForm(false); }}
-                className={`w-full text-left py-1.5 px-2 rounded border flex items-center gap-1.5 cursor-pointer ${
-                  activeScenario === 'cafe' && !showCreateForm ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5' : 'border-transparent text-gray-400 hover:text-white'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs flex items-center gap-2 transition-colors ${
+                  activeScenario === 'cafe' && !showCreateForm ? 'bg-[#181E26] text-[#22D3EE] font-medium' : 'text-[#9AA4B2] hover:text-[#F2F4F7] hover:bg-[#151A21]'
                 }`}
               >
-                <Coffee size={10} /> Coffee Shop Order
+                <Coffee size={12} /> Coffee Shop Order
               </button>
               <button
                 onClick={() => { HudAudio.playClick(); setActiveScenario('interview'); setShowCreateForm(false); }}
-                className={`w-full text-left py-1.5 px-2 rounded border flex items-center gap-1.5 cursor-pointer ${
-                  activeScenario === 'interview' && !showCreateForm ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5' : 'border-transparent text-gray-400 hover:text-white'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs flex items-center gap-2 transition-colors ${
+                  activeScenario === 'interview' && !showCreateForm ? 'bg-[#181E26] text-[#22D3EE] font-medium' : 'text-[#9AA4B2] hover:text-[#F2F4F7] hover:bg-[#151A21]'
                 }`}
               >
-                <Briefcase size={10} /> Job Interview
+                <Briefcase size={12} /> Job Interview
               </button>
               <button
                 onClick={() => { HudAudio.playClick(); setActiveScenario('directions'); setShowCreateForm(false); }}
-                className={`w-full text-left py-1.5 px-2 rounded border flex items-center gap-1.5 cursor-pointer ${
-                  activeScenario === 'directions' && !showCreateForm ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5' : 'border-transparent text-gray-400 hover:text-white'
+                className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs flex items-center gap-2 transition-colors ${
+                  activeScenario === 'directions' && !showCreateForm ? 'bg-[#181E26] text-[#22D3EE] font-medium' : 'text-[#9AA4B2] hover:text-[#F2F4F7] hover:bg-[#151A21]'
                 }`}
               >
-                <MapPin size={10} /> Asking Directions
+                <MapPin size={12} /> Asking Directions
               </button>
 
               {/* Render custom scenarios */}
@@ -1849,14 +1849,14 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
                 <button
                   key={cs.id}
                   onClick={() => { HudAudio.playClick(); setActiveScenario(`custom_${cs.id}`); setShowCreateForm(false); }}
-                  className={`w-full text-left py-1.5 px-2 rounded border flex items-center justify-between cursor-pointer ${
-                    activeScenario === `custom_${cs.id}` && !showCreateForm ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5' : 'border-transparent text-gray-400 hover:text-white'
+                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                    activeScenario === `custom_${cs.id}` && !showCreateForm ? 'bg-[#181E26] text-[#22D3EE] font-medium' : 'text-[#9AA4B2] hover:text-[#F2F4F7] hover:bg-[#151A21]'
                   }`}
                 >
-                  <span className="truncate pr-1 flex items-center gap-1.5 font-bold">🎬 {cs.title}</span>
+                  <span className="truncate pr-1 flex items-center gap-1.5">🎬 {cs.title}</span>
                   <Trash2 
-                    size={10} 
-                    className="text-gray-500 hover:text-cyber-pink flex-shrink-0 cursor-pointer"
+                    size={11} 
+                    className="text-[#66707E] hover:text-[#EF4444] flex-shrink-0"
                     onClick={(e) => handleDeleteCustomScenario(cs.id, e)} 
                   />
                 </button>
@@ -1866,15 +1866,15 @@ export default function EnglishCoach({ gainXP, writeLog }: EnglishCoachProps) {
 
           <button
             onClick={resetProgress}
-            className="w-full py-1.5 border border-cyber-pink/20 hover:border-cyber-pink text-cyber-pink hover:bg-cyber-pink/5 rounded text-[9px] flex items-center justify-center gap-1 mt-4 transition-colors cursor-pointer"
+            className="w-full py-1.5 border border-[#252C35] hover:border-[#EF4444]/40 hover:text-[#EF4444] text-[#66707E] rounded-lg text-xs flex items-center justify-center gap-1.5 mt-4 transition-colors"
           >
-            <RefreshCw size={10} /> Reset Statistics
+            <RefreshCw size={11} /> Reset Statistics
           </button>
         </div>
       </div>
 
       {/* Main Chat Interface or Custom Scenario Creator form */}
-      <div className="lg:col-span-3 cyber-card p-5 rounded-lg border-cyber-cyan/25 flex flex-col h-[520px] lg:h-[600px]">
+      <div className="lg:col-span-3 app-card p-6 flex flex-col h-[520px] lg:h-[600px]">
         {showCreateForm ? (
           /* Smart AI Topic Generator Panel */
           <form onSubmit={handleCreateAIScenario} className="flex-1 flex flex-col justify-center space-y-6 font-mono text-[10px] max-w-sm mx-auto w-full">

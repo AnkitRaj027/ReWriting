@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Check, Flame } from 'lucide-react';
+import { Plus, Trash2, Check, Flame, X } from 'lucide-react';
 import IconRenderer from './IconRenderer';
 import { HudAudio } from '../utils/HudAudio';
 import { Habit, HudSettings } from '../hooks/useNexusState';
-import { getTranslation } from '../utils/glossary';
 
 interface HabitsViewProps {
   habits: Habit[];
@@ -15,50 +14,26 @@ interface HabitsViewProps {
   deleteHabit: (id: string) => void;
 }
 
-export default function HabitsView({ 
-  habits, 
-  settings, 
-  toggleHabit, 
-  addHabit, 
-  deleteHabit 
+export default function HabitsView({
+  habits,
+  settings,
+  toggleHabit,
+  addHabit,
+  deleteHabit
 }: HabitsViewProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<'BODY' | 'MIND' | 'TECH'>('MIND');
   const [icon, setIcon] = useState('Brain');
 
   const today = new Date().toISOString().split('T')[0];
-  const vocab = settings.vocabulary;
-
-  const handleToggle = (id: string) => {
-    toggleHabit(id);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addHabit(name, category, icon);
+    addHabit(name.trim(), category, icon);
     setName('');
-    setShowAddForm(false);
-  };
-
-  const getCategoryColor = (cat: Habit['category']) => {
-    switch (cat) {
-      case 'BODY': return 'text-cyber-green border-cyber-green/20 bg-cyber-green/5';
-      case 'MIND': return 'text-cyber-cyan border-cyber-cyan/20 bg-cyber-cyan/5';
-      case 'TECH': return 'text-cyber-purple border-cyber-purple/20 bg-cyber-purple/5';
-      default: return 'text-gray-400 border-gray-400/20 bg-gray-400/5';
-    }
-  };
-
-  const getCategoryLabel = (cat: Habit['category']) => {
-    if (vocab === 'cyberpunk') {
-      return cat === 'BODY' ? 'Body Vitals' : cat === 'TECH' ? 'Tech Skills' : 'Mind Logic';
-    }
-    if (vocab === 'academic') {
-      return cat === 'BODY' ? 'HEALTH / SPORT' : cat === 'TECH' ? 'PRACTICAL / STUDY' : 'COGNITIVE / READING';
-    }
-    return cat === 'BODY' ? 'HEALTH / BODY' : cat === 'TECH' ? 'TASKS / WORK' : 'MIND / HABITS';
+    setShowAddModal(false);
   };
 
   const getLast30Days = () => {
@@ -74,191 +49,231 @@ export default function HabitsView({
   const last30Days = getLast30Days();
 
   const iconOptions = [
-    { name: 'Brain', label: 'Mind (Brain)' },
-    { name: 'Code', label: 'Logic (Code)' },
-    { name: 'Droplet', label: 'Vitals (Droplet)' },
-    { name: 'Activity', label: 'Fitness (Activity)' },
-    { name: 'BookOpen', label: 'Read (Book)' },
-    { name: 'Flame', label: 'Stamina (Flame)' },
-    { name: 'Shield', label: 'Security (Shield)' },
-    { name: 'Compass', label: 'Goals (Compass)' },
-    { name: 'Coffee', label: 'Rest (Coffee)' }
+    { name: 'Brain', label: 'Mind' },
+    { name: 'Code', label: 'Coding' },
+    { name: 'Droplet', label: 'Hydration' },
+    { name: 'Activity', label: 'Fitness' },
+    { name: 'BookOpen', label: 'Reading' },
+    { name: 'Flame', label: 'Discipline' },
+    { name: 'Shield', label: 'Wellness' },
+    { name: 'Compass', label: 'Focus' },
+    { name: 'Coffee', label: 'Break' }
   ];
 
+  const getCategoryBadge = (cat: Habit['category']) => {
+    switch (cat) {
+      case 'BODY':
+        return 'text-[#22C7D9] bg-[#22C7D9]/10 border-[#22C7D9]/25';
+      case 'MIND':
+        return 'text-[#8B5CF6] bg-[#8B5CF6]/10 border-[#8B5CF6]/25';
+      case 'TECH':
+        return 'text-[#38BDF8] bg-[#38BDF8]/10 border-[#38BDF8]/25';
+      default:
+        return 'text-[#9AA2AD] bg-[#1A1F26] border-[#252B33]';
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Title Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-cyber-cyan/20 pb-3">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Title & Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 pb-3 border-b border-[#252B33]">
         <div>
-          <h2 className="text-xl font-mono font-bold tracking-widest text-white flex items-center gap-2">
-            <span className="text-cyber-cyan animate-pulse">■</span> 
-            {getTranslation(vocab, 'habitsTitle').toUpperCase()}
+          <h2 className="text-xl font-semibold tracking-tight text-[#F1F3F5]">
+            My Habits
           </h2>
-          <p className="text-xs text-gray-500 font-mono mt-1">
-            {getTranslation(vocab, 'habitsSubtitle')}
+          <p className="text-xs text-[#9AA2AD] mt-0.5">
+            Daily consistency and rituals tracked across 30-day rhythms.
           </p>
         </div>
 
         <button
-          onClick={() => { HudAudio.playClick(); setShowAddForm(!showAddForm); }}
-          onMouseEnter={() => HudAudio.playHover()}
-          className="btn-cyber-cyan px-3 py-1.5 rounded text-xs flex items-center gap-1.5"
+          onClick={() => {
+            HudAudio.playClick();
+            setShowAddModal(true);
+          }}
+          className="btn-primary text-xs flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <Plus size={14} /> {showAddForm ? 'CANCEL_PROTOCOL' : 'CREATE_NEW_HABIT'}
+          <Plus size={14} />
+          <span>New Habit</span>
         </button>
       </div>
 
-      {/* Add Habit Configuration Form */}
-      {showAddForm && (
-        <form onSubmit={handleSubmit} className="cyber-card p-5 rounded-lg border-cyber-cyan/35 max-w-xl mx-auto space-y-4 font-mono text-[10px]">
-          <h3 className="text-xs text-cyber-cyan font-bold tracking-wider border-b border-cyber-cyan/15 pb-2">
-            CONFIGURE_NEW_DAILY_HABIT
-          </h3>
-
-          <div className="space-y-1.5">
-            <label className="text-gray-400 block font-bold">HABIT_NAME</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Solve 2 Coding Exercises"
-              className="w-full bg-obsidian-deep border border-cyber-cyan/30 rounded px-3 py-2 text-cyber-cyan outline-none text-xs"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-gray-400 block font-bold">CATEGORY</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full bg-obsidian-deep border border-cyber-cyan/30 rounded px-3 py-2 text-cyber-cyan outline-none text-xs"
+      {/* Add Habit Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0D10]/80 backdrop-blur-sm p-4">
+          <div className="app-card p-6 max-w-md w-full border-[#323B46] space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#252B33]">
+              <h3 className="text-sm font-semibold text-[#F1F3F5]">Create New Habit</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-[#68717D] hover:text-[#F1F3F5] p-1"
               >
-                <option value="MIND">Mind - Cognitive</option>
-                <option value="BODY">Body - Physical</option>
-                <option value="TECH">Tech - Work</option>
-              </select>
+                <X size={16} />
+              </button>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-gray-400 block font-bold">ICON_CORES</label>
-              <select
-                value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                className="w-full bg-obsidian-deep border border-cyber-cyan/30 rounded px-3 py-2 text-cyber-cyan outline-none text-xs"
-              >
-                {iconOptions.map((opt) => (
-                  <option key={opt.name} value={opt.name}>{opt.label.toUpperCase()}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#9AA2AD] block">Habit Name</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Morning walk, Read 20 pages, Hydrate"
+                  className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md px-3 py-2 text-xs text-[#F1F3F5] outline-none"
+                  autoFocus
+                />
+              </div>
 
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              onMouseEnter={() => HudAudio.playHover()}
-              className="btn-cyber-cyan px-4 py-2 rounded text-xs animate-pulse-glow"
-            >
-              LOG_HABIT_TO_DB
-            </button>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#9AA2AD] block">Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as any)}
+                    className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md px-3 py-2 text-xs text-[#F1F3F5] outline-none"
+                  >
+                    <option value="MIND">Mind (Cognitive)</option>
+                    <option value="BODY">Body (Physical)</option>
+                    <option value="TECH">Tech (Career)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#9AA2AD] block">Icon</label>
+                  <select
+                    value={icon}
+                    onChange={(e) => setIcon(e.target.value)}
+                    className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md px-3 py-2 text-xs text-[#F1F3F5] outline-none"
+                  >
+                    {iconOptions.map((opt) => (
+                      <option key={opt.name} value={opt.name}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#252B33]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="btn-secondary text-xs"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary text-xs">
+                  Create Habit
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       )}
 
-      {/* Habits Grid */}
-      <div className="space-y-6">
+      {/* Habits List */}
+      <div className="space-y-3">
         {habits.length === 0 ? (
-          <div className="cyber-card p-12 text-center text-gray-500 font-mono text-sm border-dashed">
-            NO ACTIVE HABIT MODULES DETECTED.
+          <div className="app-card p-12 text-center text-xs text-[#68717D]">
+            No habits configured yet. Click "New Habit" above to add your first daily ritual.
           </div>
         ) : (
           habits.map((habit) => {
             const isCompletedToday = habit.history.includes(today);
-            const checkinsLast30 = habit.history.filter(d => last30Days.includes(d)).length;
+            const checkinsLast30 = habit.history.filter((d) => last30Days.includes(d)).length;
             const complianceRate = Math.round((checkinsLast30 / 30) * 100);
 
             return (
-              <div 
+              <div
                 key={habit.id}
-                className="cyber-card p-5 rounded-lg border-cyber-cyan/15 flex flex-col md:flex-row md:items-center justify-between gap-6"
+                className="app-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
-                <div className="flex items-start space-x-4 md:w-1/3">
+                {/* Checkbox & Habit info */}
+                <div className="flex items-center gap-3.5 md:w-1/3 min-w-0">
                   <button
-                    onClick={() => handleToggle(habit.id)}
+                    onClick={() => toggleHabit(habit.id)}
                     onMouseEnter={() => HudAudio.playHover()}
-                    className={`w-12 h-12 rounded border flex items-center justify-center transition-all cursor-pointer ${
-                      isCompletedToday 
-                        ? 'bg-cyber-cyan text-obsidian-deep border-cyber-cyan shadow-[0_0_12px_rgba(0,240,255,0.4)]' 
-                        : 'border-cyber-cyan/30 hover:border-cyber-cyan hover:bg-cyber-cyan/5 text-cyber-cyan'
+                    className={`w-8 h-8 rounded-md border flex items-center justify-center transition-all flex-shrink-0 cursor-pointer ${
+                      isCompletedToday
+                        ? 'bg-[#10B981] border-[#10B981] text-[#0B0D10]'
+                        : 'bg-[#101318] border-[#252B33] text-[#9AA2AD] hover:border-[#323B46] hover:text-[#F1F3F5]'
                     }`}
                   >
                     {isCompletedToday ? (
-                      <Check size={22} className="stroke-[3.5px]" />
+                      <Check size={16} className="stroke-[3px]" />
                     ) : (
-                      <IconRenderer name={habit.icon} size={20} />
+                      <IconRenderer name={habit.icon} size={15} />
                     )}
                   </button>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="text-sm font-bold text-white tracking-wide">{habit.name}</h4>
-                      <span className={`text-[8px] px-1.5 py-0.5 rounded border font-mono ${getCategoryColor(habit.category)}`}>
-                        {getCategoryLabel(habit.category)}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4
+                        className={`text-sm font-medium truncate ${
+                          isCompletedToday ? 'text-[#68717D] line-through' : 'text-[#F1F3F5]'
+                        }`}
+                      >
+                        {habit.name}
+                      </h4>
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.2 rounded border ${getCategoryBadge(
+                          habit.category
+                        )}`}
+                      >
+                        {habit.category}
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-3 text-[10px] font-mono text-gray-500">
-                      <span className="flex items-center text-cyber-pink gap-0.5 font-bold">
-                        <Flame size={10} /> {habit.streak}d streak
+                    <div className="flex items-center gap-3 text-xs text-[#68717D] mt-0.5">
+                      <span className="flex items-center gap-0.5 text-[#F59E0B] font-medium">
+                        <Flame size={11} />
+                        {habit.streak}d streak
                       </span>
                       <span>•</span>
-                      <span>Rate: <strong className="text-cyber-cyan font-bold">{complianceRate}%</strong></span>
+                      <span>
+                        Rate:{' '}
+                        <strong className="text-[#F1F3F5] font-medium">
+                          {complianceRate}%
+                        </strong>
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* 30-Day Check-in Heatmap Grid */}
-                <div className="flex-1 space-y-2">
-                  <div className="flex justify-between font-mono text-[8px] text-gray-600">
-                    <span>30 DAYS AGO</span>
-                    <span>TODAY</span>
+                <div className="flex-1 space-y-1 max-w-sm">
+                  <div className="flex justify-between text-[10px] text-[#68717D]">
+                    <span>30 days ago</span>
+                    <span>Today</span>
                   </div>
 
-                  <div className="flex flex-wrap gap-1 bg-obsidian-deep/50 p-2 rounded border border-obsidian-light/40">
+                  <div className="flex gap-1 p-1 rounded-md bg-[#101318] border border-[#252B33]">
                     {last30Days.map((date) => {
                       const done = habit.history.includes(date);
                       const isToday = date === today;
-                      
-                      let bgClass = 'bg-obsidian-light border-obsidian-light/35';
-                      if (done) {
-                        bgClass = habit.category === 'TECH' 
-                          ? 'bg-cyber-purple border-cyber-purple shadow-[0_0_5px_#7000FF]' 
-                          : habit.category === 'BODY'
-                          ? 'bg-cyber-green border-cyber-green shadow-[0_0_5px_#00FF66]'
-                          : 'bg-cyber-cyan border-cyber-cyan shadow-[0_0_5px_#00F0FF]';
-                      }
 
                       return (
-                        <div 
+                        <div
                           key={date}
-                          title={`${date}: ${done ? 'Completed' : 'Skipped'}`}
-                          className={`w-3.5 h-3.5 rounded-sm border transition-all hover:scale-125 cursor-pointer ${bgClass} ${
-                            isToday ? 'border-cyber-pink/60' : 'border-transparent'
-                          }`}
+                          title={`${date}: ${done ? 'Completed' : 'Missed'}`}
+                          className={`flex-1 h-3.5 rounded-xs transition-colors cursor-pointer ${
+                            done ? 'bg-[#10B981]' : 'bg-[#1A1F26] hover:bg-[#252B33]'
+                          } ${isToday ? 'ring-1 ring-[#F1F3F5]' : ''}`}
                         />
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Purge button */}
-                <div className="flex items-center justify-end md:w-16">
+                {/* Delete button */}
+                <div className="flex items-center justify-end md:w-12">
                   <button
                     onClick={() => deleteHabit(habit.id)}
                     onMouseEnter={() => HudAudio.playHover()}
-                    className="p-2 border border-cyber-pink/20 hover:border-cyber-pink text-cyber-pink/60 hover:text-cyber-pink hover:bg-cyber-pink/5 rounded transition-all cursor-pointer"
+                    className="p-1.5 rounded text-[#68717D] hover:text-[#EF4444] hover:bg-[#1A1F26] transition-colors"
+                    title="Delete habit"
                   >
                     <Trash2 size={13} />
                   </button>

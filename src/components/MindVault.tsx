@@ -1,10 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Award, AlertTriangle, RefreshCw, Calendar, Search, FileText, Plus, Trash2, Save, Pin } from 'lucide-react';
+import {
+  FileText,
+  Plus,
+  Trash2,
+  Save,
+  Pin,
+  Search,
+  BookOpen,
+  Calendar
+} from 'lucide-react';
 import { HudAudio } from '../utils/HudAudio';
 import { MoodEnergyLog, ReflectionLog, Note, HudSettings } from '../hooks/useNexusState';
-import { getTranslation } from '../utils/glossary';
 
 interface MindVaultProps {
   moodLogs: MoodEnergyLog[];
@@ -29,6 +37,8 @@ export default function MindVault({
   editNote,
   deleteNote
 }: MindVaultProps) {
+  const [activeSection, setActiveSection] = useState<'notebook' | 'reflections' | 'energy'>('notebook');
+
   // Biometrics States
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [selectedEnergy, setSelectedEnergy] = useState<number | null>(null);
@@ -47,13 +57,23 @@ export default function MindVault({
   const [noteTags, setNoteTags] = useState(notes[0]?.tags || '');
   const [notePinned, setNotePinned] = useState(notes[0]?.pinned || false);
 
-  const vocab = settings.vocabulary;
-
   // Rotating Prompt Sets
   const promptSets = [
-    { wins: "What went exceptionally well today?", errors: "What caused friction or delay?", optimizations: "How will you prevent this delay tomorrow?" },
-    { wins: "What is your main win today?", errors: "What distraction or blocker did you face?", optimizations: "What single change makes tomorrow better?" },
-    { wins: "What are you proud of completing?", errors: "Where did you lose focus or waste time?", optimizations: "What is your key priority for tomorrow?" }
+    {
+      wins: 'What went exceptionally well today?',
+      errors: 'What caused friction or delay?',
+      optimizations: 'How will you cultivate clarity tomorrow?'
+    },
+    {
+      wins: 'What is your main win today?',
+      errors: 'What distraction or blocker did you face?',
+      optimizations: 'What small step will make tomorrow smoother?'
+    },
+    {
+      wins: 'What are you proud of completing?',
+      errors: 'Where did you feel depleted or off track?',
+      optimizations: 'What is your priority for tomorrow?'
+    }
   ];
   const activePromptSet = promptSets[new Date().getDate() % promptSets.length];
 
@@ -72,14 +92,15 @@ export default function MindVault({
     saveMoodEnergy(selectedMood, selectedEnergy);
   };
 
-  // Notebook Notes actions
-  const selectNote = (note: Note) => {
-    HudAudio.playClick();
-    setActiveNoteId(note.id);
-    setNoteTitle(note.title);
-    setNoteContent(note.content);
-    setNoteTags(note.tags);
-    setNotePinned(note.pinned);
+  const handleSaveNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteTitle.trim() && !noteContent.trim()) return;
+
+    if (activeNoteId) {
+      editNote(activeNoteId, noteTitle, noteContent, noteTags, notePinned);
+    } else {
+      addNote(noteTitle, noteContent, noteTags, notePinned);
+    }
   };
 
   const handleCreateNewNote = () => {
@@ -91,278 +112,154 @@ export default function MindVault({
     setNotePinned(false);
   };
 
-  const handleSaveNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noteTitle.trim()) return;
-
-    if (activeNoteId) {
-      editNote(activeNoteId, noteTitle, noteContent, noteTags, notePinned);
-    } else {
-      addNote(noteTitle, noteContent, noteTags, notePinned);
-      // Wait for state recalculation, then set focus
-      setActiveNoteId(`n_${Date.now()}`); // temp lock
-    }
+  const selectNote = (note: Note) => {
+    HudAudio.playClick();
+    setActiveNoteId(note.id);
+    setNoteTitle(note.title);
+    setNoteContent(note.content);
+    setNoteTags(note.tags);
+    setNotePinned(note.pinned || false);
   };
 
   const handleDeleteNote = (id: string) => {
+    HudAudio.playClick();
     deleteNote(id);
-    const remainder = notes.filter(n => n.id !== id);
-    if (remainder.length > 0) {
-      selectNote(remainder[0]);
-    } else {
+    if (activeNoteId === id) {
       handleCreateNewNote();
     }
   };
 
-  // Filters notes based on query
-  const filteredNotes = notes.filter(n => 
-    n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    n.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    n.tags.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredNotes = notes.filter(
+    (n) =>
+      n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      n.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      n.tags.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getQuadrantLabel = (m: number, e: number) => {
-    if (m >= 6 && e >= 6) return 'High Focus (Excited & Focused)';
-    if (m >= 6 && e < 6) return 'Relaxed Calm (Peaceful & Calm)';
-    if (m < 6 && e >= 6) return 'Friction State (Anxious & Stressed)';
-    return 'Standby State (Fatigued & Sleepy)';
-  };
-
-  const getQuadrantColor = (m: number, e: number) => {
-    if (m >= 6 && e >= 6) return 'text-cyber-green';
-    if (m >= 6 && e < 6) return 'text-cyber-cyan';
-    if (m < 6 && e >= 6) return 'text-cyber-pink';
-    return 'text-yellow-500';
-  };
-
-  const getWinsLabel = () => {
-    if (vocab === 'cyberpunk') return '1. Success Vectors (System Wins)';
-    if (vocab === 'academic') return '1. What I accomplished today';
-    return '1. Daily Wins & Successes';
-  };
-
-  const getErrorsLabel = () => {
-    if (vocab === 'cyberpunk') return '2. Frictions Detected (System Errors)';
-    if (vocab === 'academic') return '2. Obstacles faced';
-    return '2. Mistakes & Friction faced';
-  };
-
-  const getOptimizationsLabel = () => {
-    if (vocab === 'cyberpunk') return '3. Structural Optimizations (Upgrades)';
-    if (vocab === 'academic') return '3. Lessons learned for tomorrow';
-    return '3. Things to improve tomorrow';
+    if (m >= 6 && e >= 6) return 'High Focus & Flow';
+    if (m >= 6 && e < 6) return 'Calm & Restorative';
+    if (m < 6 && e >= 6) return 'High Stress or Tension';
+    return 'Low Energy & Fatigue';
   };
 
   return (
-    <div className="space-y-6">
-      
-      {/* View Title */}
-      <div className="border-b border-cyber-cyan/20 pb-3">
-        <h2 className="text-xl font-mono font-bold tracking-widest text-white flex items-center gap-2">
-          <span className="text-cyber-cyan animate-pulse">■</span> 
-          {getTranslation(vocab, 'vaultTitle')}
-        </h2>
-        <p className="text-xs text-gray-500 font-mono mt-1">
-          {getTranslation(vocab, 'vaultSubtitle')}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Mood & Energy Quadrant Selector */}
-        <div className="cyber-card p-5 rounded-lg border-cyber-cyan/15 flex flex-col justify-between space-y-4">
-          <div>
-            <span className="font-mono text-xs text-cyber-cyan tracking-wider font-bold block mb-1">
-              Energy Plane Grid
-            </span>
-            <p className="text-[10px] text-gray-500 font-mono mb-4">
-              Log your state on the grid (Mood is vertical axis, Energy is horizontal axis).
-            </p>
-
-            <div className="relative border border-cyber-cyan/15 p-2 rounded bg-obsidian-deep/50 max-w-xs mx-auto">
-              <div className="grid grid-cols-10 gap-0.5 aspect-square">
-                {Array.from({ length: 100 }).map((_, idx) => {
-                  const x = (idx % 10) + 1;
-                  const y = 10 - Math.floor(idx / 10);
-                  
-                  const isSelected = selectedEnergy === x && selectedMood === y;
-                  const isHovered = hoveredCell?.energy === x && hoveredCell?.mood === y;
-
-                  let cellBg = 'bg-obsidian-light/20 hover:bg-cyber-cyan/10';
-                  if (isSelected) {
-                    cellBg = 'bg-cyber-cyan border border-white shadow-[0_0_8px_#00F0FF]';
-                  } else if (isHovered) {
-                    cellBg = 'bg-cyber-cyan/20 border border-cyber-cyan/35';
-                  }
-
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => { HudAudio.playClick(); setSelectedMood(y); setSelectedEnergy(x); }}
-                      onMouseEnter={() => { HudAudio.playHover(); setHoveredCell({ mood: y, energy: x }); }}
-                      onMouseLeave={() => setHoveredCell(null)}
-                      className={`w-full h-full rounded-sm border border-transparent transition-all outline-none cursor-pointer ${cellBg}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-cyber-cyan/10 space-y-3 font-mono">
-            <div className="flex justify-between items-center text-[10px]">
-              <div>
-                <span className="text-gray-500 block">Selected:</span>
-                {selectedMood !== null && selectedEnergy !== null ? (
-                  <span className="text-white font-bold">
-                    Energy: <strong className="text-cyber-cyan">{selectedEnergy}</strong> | 
-                    Mood: <strong className="text-cyber-purple">{selectedMood}</strong>
-                  </span>
-                ) : (
-                  <span className="text-gray-600">Select a grid cell...</span>
-                )}
-              </div>
-              <div>
-                <span className="text-gray-500 block text-right">State:</span>
-                {selectedMood !== null && selectedEnergy !== null ? (
-                  <span className={`font-bold ${getQuadrantColor(selectedMood, selectedEnergy)}`}>
-                    {getQuadrantLabel(selectedMood, selectedEnergy).split(' (')[0]}
-                  </span>
-                ) : (
-                  <span className="text-gray-600 text-right block">None selected</span>
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={handleSaveBiometrics}
-              disabled={selectedMood === null || selectedEnergy === null}
-              onMouseEnter={() => HudAudio.playHover()}
-              className="w-full py-1.5 rounded text-[10px] btn-cyber-cyan disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-            >
-              Save Mood and Energy Coordinates
-            </button>
-          </div>
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Title & Subnavigation Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 pb-3 border-b border-[#252B33]">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-[#F1F3F5]">
+            My Notebook & Journal
+          </h2>
+          <p className="text-xs text-[#9AA2AD] mt-0.5">
+            Reflections, personal notes, and daily mental state calibration.
+          </p>
         </div>
 
-        {/* Reflection Compiler Form (Rotated Daily Prompts) */}
-        <form onSubmit={handleReflectionSubmit} className="cyber-card p-5 rounded-lg border-cyber-cyan/15 space-y-4 font-mono text-[10px]">
-          <span className="text-xs text-cyber-cyan font-bold tracking-wider block border-b border-cyber-cyan/15 pb-2">
-            Daily Journal Writeback
-          </span>
-
-          <div className="space-y-1.5">
-            <label className="text-cyber-green font-bold flex items-center gap-1.5 uppercase">
-              <Award size={12} /> {getWinsLabel()}
-            </label>
-            <textarea
-              value={wins}
-              onChange={(e) => setWins(e.target.value)}
-              placeholder={activePromptSet.wins}
-              rows={2}
-              className="w-full bg-obsidian-deep border border-cyber-cyan/25 focus:border-cyber-cyan rounded px-3 py-2 text-cyber-cyan outline-none text-xs"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-cyber-pink font-bold flex items-center gap-1.5 uppercase">
-              <AlertTriangle size={12} /> {getErrorsLabel()}
-            </label>
-            <textarea
-              value={errors}
-              onChange={(e) => setErrors(e.target.value)}
-              placeholder={activePromptSet.errors}
-              rows={2}
-              className="w-full bg-obsidian-deep border border-cyber-cyan/25 focus:border-cyber-cyan rounded px-3 py-2 text-cyber-cyan outline-none text-xs"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-cyber-purple font-bold flex items-center gap-1.5 uppercase">
-              <RefreshCw size={12} /> {getOptimizationsLabel()}
-            </label>
-            <textarea
-              value={optimizations}
-              onChange={(e) => setOptimizations(e.target.value)}
-              placeholder={activePromptSet.optimizations}
-              rows={2}
-              className="w-full bg-obsidian-deep border border-cyber-cyan/25 focus:border-cyber-cyan rounded px-3 py-2 text-cyber-cyan outline-none text-xs"
-            />
-          </div>
-
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              onMouseEnter={() => HudAudio.playHover()}
-              className="btn-cyber-cyan px-4 py-2 rounded text-xs cursor-pointer"
-            >
-              Write Reflection Log (+100 XP)
-            </button>
-          </div>
-        </form>
-
-      </div>
-
-      {/* NOTEBOOK WORKSPACE MODULE */}
-      <section className="cyber-card p-5 rounded-lg border-cyber-cyan/15 space-y-4">
-        <div className="flex items-center justify-between border-b border-cyber-cyan/15 pb-2">
-          <span className="font-mono text-sm font-bold text-white flex items-center gap-1.5">
-            <FileText size={14} className="text-cyber-cyan" /> My Notebook Workspace
-          </span>
+        {/* Section Tabs */}
+        <div className="flex items-center gap-1 bg-[#101318] p-1 rounded-md border border-[#252B33] self-start sm:self-auto">
           <button
-            onClick={handleCreateNewNote}
-            className="btn-cyber-cyan px-2 py-1 rounded text-[10px] font-mono flex items-center gap-1 cursor-pointer"
+            onClick={() => setActiveSection('notebook')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSection === 'notebook'
+                ? 'bg-[#15191F] text-[#F1F3F5] border border-[#252B33]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5]'
+            }`}
           >
-            <Plus size={11} /> Create New Note
+            Notebook
+          </button>
+          <button
+            onClick={() => setActiveSection('reflections')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSection === 'reflections'
+                ? 'bg-[#15191F] text-[#F1F3F5] border border-[#252B33]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5]'
+            }`}
+          >
+            Daily Journal
+          </button>
+          <button
+            onClick={() => setActiveSection('energy')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSection === 'energy'
+                ? 'bg-[#15191F] text-[#F1F3F5] border border-[#252B33]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5]'
+            }`}
+          >
+            Energy Grid
           </button>
         </div>
+      </div>
 
+      {/* 1. NOTEBOOK WORKSPACE */}
+      {activeSection === 'notebook' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Notes Sidebar List */}
-          <div className="md:col-span-1 space-y-3">
-            {/* Search query input */}
-            <div className="flex items-center space-x-2 bg-obsidian-deep border border-cyber-cyan/20 rounded px-2.5 py-1.5">
-              <Search size={12} className="text-gray-500" />
+          {/* Notes Sidebar */}
+          <div className="app-card p-4 space-y-3 md:col-span-1 flex flex-col h-[520px]">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-[#9AA2AD]">
+                Notes ({notes.length})
+              </span>
+              <button
+                onClick={handleCreateNewNote}
+                className="btn-primary text-xs py-1 px-2.5 flex items-center gap-1"
+              >
+                <Plus size={13} />
+                <span>New</span>
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#68717D]"
+              />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search notes or tags..."
-                className="w-full bg-transparent outline-none border-none text-cyber-cyan placeholder-gray-600 text-[10px] font-mono"
+                className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md pl-8 pr-3 py-1.5 text-xs text-[#F1F3F5] outline-none"
               />
             </div>
 
-            {/* Note items scroll pane */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            {/* Notes list */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {filteredNotes.length === 0 ? (
-                <div className="text-center py-6 text-[10px] text-gray-500 font-mono">
-                  No notes match criteria.
+                <div className="text-center py-10 text-xs text-[#68717D]">
+                  No matching notes found.
                 </div>
               ) : (
                 filteredNotes.map((note) => (
                   <button
                     key={note.id}
                     onClick={() => selectNote(note)}
-                    className={`w-full text-left p-3 rounded border font-mono text-[10px] block transition-all relative cursor-pointer ${
+                    className={`w-full text-left p-3 rounded-md border transition-colors block ${
                       activeNoteId === note.id
-                        ? 'border-cyber-cyan bg-cyber-cyan/5 text-cyber-cyan font-bold'
-                        : 'border-obsidian-light hover:border-cyber-cyan/30 hover:bg-obsidian-light/30 text-gray-400'
+                        ? 'bg-[#1A1F26] border-[#323B46] text-[#F1F3F5]'
+                        : 'bg-[#101318] border-[#252B33] text-[#9AA2AD] hover:border-[#323B46] hover:text-[#F1F3F5]'
                     }`}
                   >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-white truncate max-w-[100px] flex items-center gap-1">
-                        {note.pinned && <Pin size={8} className="text-cyber-cyan" />}
-                        {note.title}
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="font-medium text-xs truncate">
+                        {note.title || 'Untitled'}
                       </span>
-                      <span className="text-[8px] text-gray-500">{note.updatedAt}</span>
+                      {note.pinned && (
+                        <Pin size={11} className="text-[#22C7D9] flex-shrink-0" />
+                      )}
                     </div>
-                    <p className="text-[9px] text-gray-500 truncate mb-1.5">{note.content}</p>
+                    <p className="text-[11px] text-[#68717D] line-clamp-2">
+                      {note.content}
+                    </p>
                     {note.tags && (
-                      <div className="flex flex-wrap gap-1">
-                        {note.tags.split(',').map(tag => (
-                          <span key={tag} className="bg-obsidian-deep px-1.5 py-0.5 rounded text-[8px] text-cyber-purple font-semibold border border-cyber-purple/10">
-                            {tag.trim()}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {note.tags.split(',').map((t) => (
+                          <span
+                            key={t}
+                            className="text-[9px] px-1.5 py-0.2 rounded bg-[#15191F] text-[#9AA2AD]"
+                          >
+                            {t.trim()}
                           </span>
                         ))}
                       </div>
@@ -373,140 +270,323 @@ export default function MindVault({
             </div>
           </div>
 
-          {/* Active Note Workspace Editor */}
-          <form onSubmit={handleSaveNote} className="md:col-span-2 space-y-4 border border-cyber-cyan/10 bg-obsidian-deep/30 p-4 rounded-lg flex flex-col justify-between min-h-[320px]">
-            <div className="space-y-3 font-mono text-[10px]">
-              <div className="flex flex-wrap gap-4">
-                {/* Note title */}
-                <div className="flex-1 space-y-1">
-                  <label className="text-gray-500 block font-bold">NOTE_TITLE</label>
-                  <input
-                    type="text"
-                    required
-                    value={noteTitle}
-                    onChange={(e) => setNoteTitle(e.target.value)}
-                    placeholder="e.g. Daily Schedule Goals"
-                    className="w-full bg-obsidian-deep border border-cyber-cyan/25 focus:border-cyber-cyan rounded px-2.5 py-1.5 text-cyber-cyan text-[11px] outline-none"
-                  />
-                </div>
-                {/* Note tags */}
-                <div className="w-full sm:w-1/3 space-y-1">
-                  <label className="text-gray-500 block font-bold">TAGS (COMMA SEPARATED)</label>
-                  <input
-                    type="text"
-                    value={noteTags}
-                    onChange={(e) => setNoteTags(e.target.value)}
-                    placeholder="e.g. notes, logs"
-                    className="w-full bg-obsidian-deep border border-cyber-cyan/25 focus:border-cyber-cyan rounded px-2.5 py-1.5 text-cyber-cyan text-[11px] outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Pin note checkbox option */}
-              <div className="flex items-center space-x-2 py-1 bg-cyber-cyan/5 border border-cyber-cyan/10 rounded px-2.5">
+          {/* Note Editor Area */}
+          <div className="app-card p-6 md:col-span-2 flex flex-col h-[520px]">
+            <form onSubmit={handleSaveNote} className="flex flex-col h-full space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#252B33] gap-3">
                 <input
-                  type="checkbox"
-                  id="pinNoteCheckbox"
-                  checked={notePinned}
-                  onChange={(e) => { HudAudio.playClick(); setNotePinned(e.target.checked); }}
-                  className="rounded border-cyber-cyan text-cyber-cyan focus:ring-cyber-cyan h-3.5 w-3.5"
+                  type="text"
+                  value={noteTitle}
+                  onChange={(e) => setNoteTitle(e.target.value)}
+                  placeholder="Note Title..."
+                  className="bg-transparent text-base font-semibold text-[#F1F3F5] outline-none flex-1 placeholder-[#68717D]"
                 />
-                <label htmlFor="pinNoteCheckbox" className="text-[10px] text-gray-300 font-bold flex items-center gap-1 cursor-pointer select-none">
-                  <Pin size={10} className="text-cyber-cyan" /> Pin this Note to CommandCenter Dashboard Home
-                </label>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNotePinned(!notePinned)}
+                    className={`p-1.5 rounded border transition-colors ${
+                      notePinned
+                        ? 'bg-[#22C7D9]/10 border-[#22C7D9]/30 text-[#22C7D9]'
+                        : 'border-[#252B33] text-[#68717D] hover:text-[#F1F3F5]'
+                    }`}
+                    title={notePinned ? 'Pinned note' : 'Pin note'}
+                  >
+                    <Pin size={14} />
+                  </button>
+
+                  {activeNoteId && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNote(activeNoteId)}
+                      className="p-1.5 rounded border border-[#252B33] text-[#68717D] hover:text-[#EF4444] transition-colors"
+                      title="Delete note"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                  >
+                    <Save size={13} />
+                    <span>Save</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Note Content */}
-              <div className="space-y-1">
-                <label className="text-gray-500 block font-bold">NOTE_CONTENT</label>
-                <textarea
-                  value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  placeholder="Start writing text or logs..."
-                  rows={8}
-                  className="w-full bg-obsidian-deep border border-cyber-cyan/25 focus:border-cyber-cyan rounded px-3 py-2 text-cyber-cyan text-xs outline-none"
+              <textarea
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Write your thoughts, daily notes, or ideas here..."
+                className="w-full flex-1 bg-transparent text-xs text-[#F1F3F5] outline-none resize-none leading-relaxed placeholder-[#68717D]"
+              />
+
+              <div className="pt-3 border-t border-[#252B33]">
+                <input
+                  type="text"
+                  value={noteTags}
+                  onChange={(e) => setNoteTags(e.target.value)}
+                  placeholder="Tags (comma separated: health, work, ideas)..."
+                  className="w-full bg-[#101318] border border-[#252B33] rounded-md px-3 py-1.5 text-xs text-[#F1F3F5] outline-none"
                 />
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. DAILY JOURNAL & REFLECTIONS */}
+      {activeSection === 'reflections' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Reflection Form */}
+          <form
+            onSubmit={handleReflectionSubmit}
+            className="app-card p-6 space-y-4 flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-baseline justify-between pb-3 border-b border-[#252B33] mb-4">
+                <h3 className="text-base font-semibold text-[#F1F3F5]">
+                  Daily Reflection
+                </h3>
+                <span className="text-[11px] text-[#10B981] font-medium">+100 XP</span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#10B981] block">
+                    1. Daily Wins & Highlights
+                  </label>
+                  <textarea
+                    value={wins}
+                    onChange={(e) => setWins(e.target.value)}
+                    placeholder={activePromptSet.wins}
+                    rows={3}
+                    className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md p-2.5 text-xs text-[#F1F3F5] outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#F59E0B] block">
+                    2. Obstacles & Friction
+                  </label>
+                  <textarea
+                    value={errors}
+                    onChange={(e) => setErrors(e.target.value)}
+                    placeholder={activePromptSet.errors}
+                    rows={3}
+                    className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md p-2.5 text-xs text-[#F1F3F5] outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#22C7D9] block">
+                    3. Focus for Tomorrow
+                  </label>
+                  <textarea
+                    value={optimizations}
+                    onChange={(e) => setOptimizations(e.target.value)}
+                    placeholder={activePromptSet.optimizations}
+                    rows={3}
+                    className="w-full bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md p-2.5 text-xs text-[#F1F3F5] outline-none"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Note Editor Operations */}
-            <div className="pt-3 border-t border-cyber-cyan/10 flex justify-between items-center font-mono text-[10px]">
-              <div>
-                {activeNoteId ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteNote(activeNoteId)}
-                    onMouseEnter={() => HudAudio.playHover()}
-                    className="px-3 py-1.5 border border-cyber-pink/40 hover:border-cyber-pink hover:bg-cyber-pink/5 text-cyber-pink rounded flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Trash2 size={12} /> Purge Note
-                  </button>
-                ) : (
-                  <span className="text-gray-600 italic">Editing New Note draft...</span>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                onMouseEnter={() => HudAudio.playHover()}
-                className="btn-cyber-cyan px-4 py-1.5 rounded flex items-center gap-1 cursor-pointer"
-              >
-                <Save size={12} /> Save Note
+            <div className="pt-3 border-t border-[#252B33] flex justify-end">
+              <button type="submit" className="btn-primary text-xs">
+                Save Reflection
               </button>
             </div>
           </form>
-        </div>
-      </section>
 
-      {/* Daily Reflections Lookup list */}
-      <section className="space-y-4">
-        <div className="border-b border-cyber-cyan/15 pb-2">
-          <h3 className="font-mono text-sm font-bold text-white flex items-center gap-1.5">
-            <Calendar size={14} className="text-cyber-cyan" /> Reflection Journal History
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {reflectionLogs.length === 0 ? (
-            <div className="cyber-card p-6 text-center text-xs text-gray-600 font-mono col-span-2">
-              No historical reflection entries found.
+          {/* Previous Reflection Logs */}
+          <div className="app-card p-6 flex flex-col justify-between">
+            <div className="flex items-baseline justify-between pb-3 border-b border-[#252B33] mb-4">
+              <h3 className="text-base font-semibold text-[#F1F3F5]">
+                Past Entries
+              </h3>
+              <span className="text-xs text-[#68717D]">
+                {reflectionLogs.length} entries
+              </span>
             </div>
-          ) : (
-            reflectionLogs.map((log) => (
-              <div key={log.date} className="cyber-card p-4 rounded-lg border-obsidian-light/60 space-y-3 font-mono text-[10px]">
-                <div className="flex justify-between items-center border-b border-obsidian-light pb-1 text-gray-500">
-                  <span className="font-bold flex items-center gap-1">
-                    <Calendar size={11} className="text-cyber-cyan" /> {log.date}
-                  </span>
-                  <span>Log Entry</span>
-                </div>
 
-                <div className="space-y-2">
-                  {log.wins && (
-                    <div>
-                      <span className="text-cyber-green block font-bold uppercase text-[9px]">Wins:</span>
-                      <p className="text-[11px] text-gray-300 pl-2 border-l border-cyber-green/30 mt-0.5">{log.wins}</p>
+            <div className="flex-1 overflow-y-auto space-y-4 max-h-[440px] pr-1">
+              {reflectionLogs.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#68717D]">
+                  No past reflection entries yet. Record today's reflection on the left.
+                </div>
+              ) : (
+                reflectionLogs.map((log, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-md bg-[#101318] border border-[#252B33] space-y-2 text-xs"
+                  >
+                    <div className="flex items-center gap-1.5 text-[#22C7D9] font-medium text-[11px]">
+                      <Calendar size={12} />
+                      <span>{log.date}</span>
                     </div>
-                  )}
-                  {log.errors && (
-                    <div>
-                      <span className="text-cyber-pink block font-bold uppercase text-[9px]">Difficulties:</span>
-                      <p className="text-[11px] text-gray-300 pl-2 border-l border-cyber-pink/30 mt-0.5">{log.errors}</p>
-                    </div>
-                  )}
-                  {log.optimizations && (
-                    <div>
-                      <span className="text-cyber-purple block font-bold uppercase text-[9px]">Lessons:</span>
-                      <p className="text-[11px] text-gray-300 pl-2 border-l border-cyber-purple/30 mt-0.5">{log.optimizations}</p>
-                    </div>
-                  )}
+
+                    {log.wins && (
+                      <div>
+                        <span className="text-[#10B981] font-medium block text-[11px]">
+                          Wins:
+                        </span>
+                        <p className="text-[#9AA2AD] mt-0.5">{log.wins}</p>
+                      </div>
+                    )}
+
+                    {log.errors && (
+                      <div>
+                        <span className="text-[#F59E0B] font-medium block text-[11px]">
+                          Friction:
+                        </span>
+                        <p className="text-[#9AA2AD] mt-0.5">{log.errors}</p>
+                      </div>
+                    )}
+
+                    {log.optimizations && (
+                      <div>
+                        <span className="text-[#22C7D9] font-medium block text-[11px]">
+                          Focus:
+                        </span>
+                        <p className="text-[#9AA2AD] mt-0.5">{log.optimizations}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ENERGY & MOOD GRID */}
+      {activeSection === 'energy' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="app-card p-6 flex flex-col justify-between space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-[#F1F3F5]">
+                Energy & State Calibration
+              </h3>
+              <p className="text-xs text-[#9AA2AD] mt-0.5 mb-4">
+                Record your mental vitality (X-axis) and emotional state (Y-axis).
+              </p>
+
+              {/* 10x10 Matrix */}
+              <div className="max-w-xs mx-auto p-3 rounded-md bg-[#101318] border border-[#252B33]">
+                <div className="grid grid-cols-10 gap-1 aspect-square">
+                  {Array.from({ length: 100 }).map((_, idx) => {
+                    const x = (idx % 10) + 1;
+                    const y = 10 - Math.floor(idx / 10);
+
+                    const isSelected = selectedEnergy === x && selectedMood === y;
+                    const isHovered =
+                      hoveredCell?.energy === x && hoveredCell?.mood === y;
+
+                    let bg = 'bg-[#1A1F26] hover:bg-[#252B33]';
+                    if (isSelected) {
+                      bg = 'bg-[#22C7D9] ring-1 ring-[#F1F3F5]';
+                    } else if (isHovered) {
+                      bg = 'bg-[#22C7D9]/40';
+                    }
+
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          HudAudio.playClick();
+                          setSelectedMood(y);
+                          setSelectedEnergy(x);
+                        }}
+                        onMouseEnter={() => {
+                          HudAudio.playHover();
+                          setHoveredCell({ mood: y, energy: x });
+                        }}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        className={`w-full h-full rounded-xs transition-colors cursor-pointer ${bg}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </section>
+            </div>
 
+            <div className="pt-4 border-t border-[#252B33] space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[#68717D] block">Coordinates:</span>
+                  <span className="font-medium text-[#F1F3F5]">
+                    {selectedMood !== null && selectedEnergy !== null
+                      ? `Energy: ${selectedEnergy} / 10 | Mood: ${selectedMood} / 10`
+                      : 'None selected'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#68717D] block text-right">Zone:</span>
+                  <span className="font-medium text-[#22C7D9]">
+                    {selectedMood !== null && selectedEnergy !== null
+                      ? getQuadrantLabel(selectedMood, selectedEnergy)
+                      : 'Uncalibrated'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSaveBiometrics}
+                disabled={selectedMood === null || selectedEnergy === null}
+                className="w-full btn-primary text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Log Coordinates
+              </button>
+            </div>
+          </div>
+
+          {/* Past Biometrics Logs */}
+          <div className="app-card p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-[#F1F3F5]">
+                Recent Logs
+              </h3>
+              <p className="text-xs text-[#9AA2AD] mt-0.5 mb-4">
+                State recordings and vitality markers
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 max-h-80 pr-1">
+              {moodLogs.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#68717D]">
+                  No energy logs recorded yet.
+                </div>
+              ) : (
+                moodLogs.map((log, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-md bg-[#101318] border border-[#252B33] flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-medium text-[#F1F3F5] block">
+                        {getQuadrantLabel(log.mood, log.energy)}
+                      </span>
+                      <span className="text-[11px] text-[#68717D]">{log.date}</span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[#22C7D9] font-medium">
+                        E: {log.energy}/10 • M: {log.mood}/10
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, SkipForward, Volume2, Settings2, Sliders, Check, FileText, Database, Clipboard } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  SkipForward,
+  FileText,
+  Clipboard,
+  Check
+} from 'lucide-react';
 import { HudAudio } from '../utils/HudAudio';
 import { HudSettings, FocusSession } from '../hooks/useNexusState';
-import { getTranslation } from '../utils/glossary';
 
 interface FocusChamberProps {
   settings: HudSettings;
@@ -36,17 +43,16 @@ export default function FocusChamber({
   const [totalTime, setTotalTime] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState<'work' | 'break'>('work');
-  const [taskName, setTaskName] = useState('Study Session');
-  const [showConfigDrawer, setShowConfigDrawer] = useState(false);
+  const [taskName, setTaskName] = useState('Deep Work');
+  const [activeSubTab, setActiveSubTab] = useState<'timer' | 'history' | 'settings' | 'backup'>('timer');
 
   // Backup operations states
   const [backupJson, setBackupJson] = useState('');
-  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const endTimeRef = useRef<number | null>(null);
 
-  // Sync custom timer changes when state is not running
   useEffect(() => {
     if (!isActive) {
       const activeLength = mode === 'work' ? customWork : customBreak;
@@ -55,7 +61,6 @@ export default function FocusChamber({
     }
   }, [customWork, customBreak, mode, isActive]);
 
-  // Terminal focus triggers
   useEffect(() => {
     const triggerMinStr = localStorage.getItem('nexus_trigger_focus_min');
     if (triggerMinStr) {
@@ -65,15 +70,14 @@ export default function FocusChamber({
         setTimeLeft(mins * 60);
         setTotalTime(mins * 60);
         setMode('work');
-        endTimeRef.current = Date.now() + (mins * 60 * 1000);
+        endTimeRef.current = Date.now() + mins * 60 * 1000;
         setIsActive(true);
-        writeLog(`Timer triggered via terminal input for ${mins} minutes`, 'info');
+        writeLog(`Focus session started: ${mins} minutes`, 'info');
       }
       localStorage.removeItem('nexus_trigger_focus_min');
     }
   }, [writeLog]);
 
-  // Timer Interval Tick
   useEffect(() => {
     if (isActive) {
       if (endTimeRef.current === null) {
@@ -83,7 +87,7 @@ export default function FocusChamber({
       const tick = () => {
         if (endTimeRef.current !== null) {
           const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
-          
+
           setTimeLeft((prev) => {
             if (remaining <= 0) {
               if (timerRef.current) clearInterval(timerRef.current);
@@ -100,9 +104,7 @@ export default function FocusChamber({
         }
       };
 
-      // Run tick immediately to ensure UI responsiveness
       tick();
-
       timerRef.current = setInterval(tick, 200);
     } else {
       if (timerRef.current) {
@@ -127,13 +129,12 @@ export default function FocusChamber({
 
     if (mode === 'work') {
       logFocusSession(customWork, taskName);
-      writeLog(`Interval complete: Work block logged for ${customWork} minutes.`, 'success');
-      // Shift to break mode automatically
+      writeLog(`Focus session concluded: ${customWork}m for "${taskName}"`, 'success');
       setMode('break');
       setTimeLeft(customBreak * 60);
       setTotalTime(customBreak * 60);
     } else {
-      writeLog(`Rest break complete. Return to focus target.`, 'success');
+      writeLog(`Rest break concluded. Return to focus.`, 'info');
       setMode('work');
       setTimeLeft(customWork * 60);
       setTotalTime(customWork * 60);
@@ -158,6 +159,16 @@ export default function FocusChamber({
     setTotalTime(activeLength * 60);
   };
 
+  const handleFinishEarly = () => {
+    HudAudio.playClick();
+    if (confirm('Finish this focus session now and record elapsed time?')) {
+      const elapsedMins = Math.max(1, Math.round((totalTime - timeLeft) / 60));
+      logFocusSession(elapsedMins, taskName);
+      writeLog(`Focus session concluded: ${elapsedMins}m for "${taskName}"`, 'success');
+      handleReset();
+    }
+  };
+
   const handleSkip = () => {
     HudAudio.playClick();
     setIsActive(false);
@@ -172,28 +183,28 @@ export default function FocusChamber({
     }
   };
 
-  // Convert seconds to human MM:SS format
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // SVG Circular stroke details
-  const radius = 98;
+  const radius = 100;
   const circumference = 2 * Math.PI * radius;
   const progressPercent = totalTime > 0 ? (totalTime - timeLeft) / totalTime : 0;
   const strokeDashoffset = circumference - progressPercent * circumference;
-
-  // Linear grid meter segments (visual EQ bar clock)
-  const totalSegments = 16;
-  const filledSegments = Math.min(totalSegments, Math.floor(progressPercent * totalSegments));
 
   const handleExportBackup = () => {
     const json = exportState();
     setBackupJson(json);
     navigator.clipboard.writeText(json);
-    writeLog("State export copied to clipboard.", "success");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    writeLog('Database backup copied to clipboard.', 'success');
   };
 
   const handleImportBackup = () => {
@@ -204,458 +215,420 @@ export default function FocusChamber({
     }
   };
 
+  const totalFocusMins = focusSessions.reduce((acc, s) => acc + s.minutes, 0);
+  const totalHours = Math.floor(totalFocusMins / 60);
+  const remainingMins = totalFocusMins % 60;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      {/* Visual Timer View panel */}
-      <div className="cyber-card p-6 rounded-lg border-cyber-cyan/20 lg:col-span-2 flex flex-col items-center justify-center min-h-[440px] relative">
-        <div className="w-full max-w-sm flex items-center justify-between mb-6 font-mono text-[10px]">
-          <span className="text-cyber-cyan font-bold tracking-wider">
-            {getTranslation(settings.vocabulary, 'focusTitle')} Timer
-          </span>
-          <div className="flex items-center space-x-2">
-            <span className={`px-2 py-0.5 border rounded font-bold ${
-              mode === 'work' ? 'border-cyber-pink/40 text-cyber-pink bg-cyber-pink/5' : 'border-cyber-green/40 text-cyber-green bg-cyber-green/5'
-            }`}>
-              {mode.toUpperCase()} MODE
-            </span>
-            <button
-              onClick={() => { HudAudio.playClick(); setShowConfigDrawer(!showConfigDrawer); }}
-              onMouseEnter={() => HudAudio.playHover()}
-              className="p-1 border border-cyber-cyan/20 hover:border-cyber-cyan text-cyber-cyan hover:bg-cyber-cyan/5 rounded cursor-pointer"
-              title="Configuration Console"
-            >
-              <Settings2 size={13} className={showConfigDrawer ? 'animate-spin' : ''} />
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic Timer Layout variant */}
-        {settings.timerMode === 'circular' ? (
-          /* CIRCULAR TIMER */
-          <div className="relative w-56 h-56 flex items-center justify-center mb-6">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="112"
-                cy="112"
-                r={radius}
-                stroke="rgba(255, 255, 255, 0.03)"
-                strokeWidth="4"
-                fill="transparent"
-              />
-              <circle
-                cx="112"
-                cy="112"
-                r={radius}
-                stroke={mode === 'work' ? 'var(--color-cyber-cyan)' : 'var(--color-cyber-green)'}
-                strokeWidth="4.5"
-                fill="transparent"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-300 shadow-glow-cyan"
-                style={{
-                  filter: mode === 'work' 
-                    ? 'drop-shadow(0 0 6px var(--color-cyber-cyan))' 
-                    : 'drop-shadow(0 0 6px var(--color-cyber-green))'
-                }}
-              />
-            </svg>
-            <div className="absolute flex flex-col items-center justify-center font-mono">
-              <span className="text-4xl font-bold tracking-widest text-white leading-none mb-1">
-                {formatTime(timeLeft)}
-              </span>
-              <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">
-                {mode === 'work' ? 'FOCUS TIME' : 'BREAK ACTIVE'}
-              </span>
-            </div>
-          </div>
-        ) : (
-          /* LINEAR EQ SEGMENT METER */
-          <div className="w-full max-w-sm flex flex-col items-center justify-center py-10 mb-6 space-y-4">
-            <div className="font-mono text-4xl font-bold tracking-widest text-white">
-              {formatTime(timeLeft)}
-            </div>
-
-            <div className="flex w-full items-center justify-between gap-1 p-1 border border-obsidian-light bg-obsidian-deep/50 rounded">
-              {Array.from({ length: totalSegments }).map((_, idx) => {
-                const filled = idx < filledSegments;
-                const isWork = mode === 'work';
-
-                let segmentBg = 'bg-obsidian-light/30 border-transparent';
-                if (filled) {
-                  segmentBg = isWork 
-                    ? 'bg-cyber-cyan border-cyber-cyan shadow-[0_0_5px_#00F0FF]' 
-                    : 'bg-cyber-green border-cyber-green shadow-[0_0_5px_#00FF66]';
-                }
-
-                return (
-                  <div 
-                    key={idx} 
-                    className={`flex-1 h-8 rounded-sm border transition-all ${segmentBg}`}
-                  />
-                );
-              })}
-            </div>
-            <div className="font-mono text-[8px] text-gray-500 uppercase tracking-widest">
-              Charging focus meter segments
-            </div>
-          </div>
-        )}
-
-        {/* Focus Task Name Input */}
-        <div className="w-full max-w-xs font-mono text-[10px] space-y-1 mb-8">
-          <input
-            type="text"
-            value={taskName}
-            onChange={(e) => setTaskName(e.target.value)}
-            placeholder="Focus Task Description..."
-            className="w-full text-center bg-transparent border-b border-cyber-cyan/20 focus:border-cyber-cyan text-white py-1 outline-none text-xs"
-          />
-        </div>
-
-        {/* Playback Controls */}
-        <div className="flex items-center space-x-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Subnavigation Bar */}
+      <div className="flex items-center justify-between border-b border-[#252B33] pb-3">
+        <div className="flex items-center gap-1">
           <button
-            onClick={handleReset}
-            onMouseEnter={() => HudAudio.playHover()}
-            className="p-3 border border-obsidian-light hover:border-cyber-cyan/45 text-gray-400 hover:text-cyber-cyan rounded-full transition-all cursor-pointer"
-            title="Reset Timer"
-          >
-            <RotateCcw size={16} />
-          </button>
-
-          <button
-            onClick={handleStartPause}
-            onMouseEnter={() => HudAudio.playHover()}
-            className={`p-5 rounded-full text-obsidian-deep transition-all transform hover:scale-105 shadow-md cursor-pointer ${
-              isActive 
-                ? 'bg-cyber-pink hover:bg-cyber-pink/80 shadow-glow-purple' 
-                : 'bg-cyber-cyan hover:bg-cyber-cyan/80 shadow-glow-cyan'
+            onClick={() => setActiveSubTab('timer')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSubTab === 'timer'
+                ? 'bg-[#15191F] text-[#F1F3F5]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5] hover:bg-[#15191F]/50'
             }`}
           >
-            {isActive ? <Pause size={24} className="stroke-[2.5px]" /> : <Play size={24} className="stroke-[2.5px] fill-current" />}
+            Timer
           </button>
-
           <button
-            onClick={handleSkip}
-            onMouseEnter={() => HudAudio.playHover()}
-            className="p-3 border border-obsidian-light hover:border-cyber-cyan/45 text-gray-400 hover:text-cyber-cyan rounded-full transition-all cursor-pointer"
-            title="Skip Interval"
+            onClick={() => setActiveSubTab('history')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSubTab === 'history'
+                ? 'bg-[#15191F] text-[#F1F3F5]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5] hover:bg-[#15191F]/50'
+            }`}
           >
-            <SkipForward size={16} />
+            History ({focusSessions.length})
           </button>
+          <button
+            onClick={() => setActiveSubTab('settings')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSubTab === 'settings'
+                ? 'bg-[#15191F] text-[#F1F3F5]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5] hover:bg-[#15191F]/50'
+            }`}
+          >
+            Settings
+          </button>
+          <button
+            onClick={() => setActiveSubTab('backup')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeSubTab === 'backup'
+                ? 'bg-[#15191F] text-[#F1F3F5]'
+                : 'text-[#9AA2AD] hover:text-[#F1F3F5] hover:bg-[#15191F]/50'
+            }`}
+          >
+            Data & Backup
+          </button>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-2 text-xs text-[#9AA2AD]">
+          <span>Today:</span>
+          <span className="font-medium text-[#F1F3F5]">
+            {totalHours}h {remainingMins}m
+          </span>
         </div>
       </div>
 
-      {/* Settings & Sidebar Panel */}
-      <div className="space-y-6">
-        
-        {/* Settings Drawer inside sidebar */}
-        {showConfigDrawer ? (
-          <div className="cyber-card p-5 rounded-lg border-cyber-cyan/35 space-y-4 font-mono text-[10px]">
-            <div className="flex items-center justify-between border-b border-cyber-cyan/20 pb-2">
-              <span className="text-xs text-cyber-cyan font-bold tracking-wider flex items-center gap-1">
-                <Sliders size={12} /> Timer Parameters
+      {/* Main Timer SubTab */}
+      {activeSubTab === 'timer' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Focus Clock Card (Calm, Focused, not a futuristic HUD) */}
+          <div className="app-card p-8 lg:col-span-2 flex flex-col items-center justify-center min-h-[440px]">
+            {/* Context label */}
+            <div className="text-center mb-6">
+              <span className="text-xs font-medium text-[#68717D] tracking-wide">
+                {mode === 'work' ? 'Focus Session' : 'Rest Break'}
               </span>
-              <button 
-                onClick={() => { HudAudio.playClick(); setShowConfigDrawer(false); }}
-                className="text-[9px] text-gray-500 hover:text-white"
+            </div>
+
+            {/* Circular Timer Clock */}
+            <div className="relative w-64 h-64 flex items-center justify-center mb-6">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="128"
+                  cy="128"
+                  r={radius}
+                  stroke="#1A1F26"
+                  strokeWidth="4"
+                  fill="transparent"
+                />
+                <circle
+                  cx="128"
+                  cy="128"
+                  r={radius}
+                  stroke={mode === 'work' ? '#22C7D9' : '#10B981'}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  className="transition-all duration-300"
+                />
+              </svg>
+
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="font-mono text-5xl font-semibold tracking-tight text-[#F1F3F5]">
+                  {formatTime(timeLeft)}
+                </span>
+                <span className="text-xs text-[#9AA2AD] mt-2 font-medium">
+                  {mode === 'work' ? taskName : 'Short Rest'}
+                </span>
+              </div>
+            </div>
+
+            {/* Current Target / Task input */}
+            <div className="w-full max-w-xs mb-8">
+              <input
+                type="text"
+                value={taskName}
+                onChange={(e) => setTaskName(e.target.value)}
+                placeholder="Session focus target (e.g. DSA, System Design)"
+                className="w-full text-center bg-[#101318] border border-[#252B33] focus:border-[#22C7D9] rounded-md px-3 py-2 text-xs text-[#F1F3F5] outline-none transition-colors"
+              />
+            </div>
+
+            {/* Calm, readable controls */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleStartPause}
+                onMouseEnter={() => HudAudio.playHover()}
+                className={`px-8 py-2.5 rounded-md font-medium text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#1A1F26] text-[#F1F3F5] border border-[#252B33] hover:bg-[#202630]'
+                    : 'bg-[#22C7D9] text-[#0B0D10] hover:bg-[#1BB0C0]'
+                }`}
               >
-                Close Settings
+                {isActive ? (
+                  <>
+                    <Pause size={14} />
+                    <span>Pause</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} className="fill-current" />
+                    <span>Start Session</span>
+                  </>
+                )}
+              </button>
+
+              {isActive && (
+                <button
+                  onClick={handleFinishEarly}
+                  onMouseEnter={() => HudAudio.playHover()}
+                  className="px-4 py-2.5 rounded-md bg-[#1A1F26] hover:bg-[#202630] border border-[#252B33] text-xs font-medium text-[#F1F3F5] transition-colors"
+                >
+                  Finish
+                </button>
+              )}
+
+              <button
+                onClick={handleReset}
+                onMouseEnter={() => HudAudio.playHover()}
+                className="p-2.5 rounded-md bg-[#1A1F26] hover:bg-[#202630] border border-[#252B33] text-[#9AA2AD] hover:text-[#F1F3F5] transition-colors"
+                title="Reset"
+              >
+                <RotateCcw size={14} />
+              </button>
+
+              <button
+                onClick={handleSkip}
+                onMouseEnter={() => HudAudio.playHover()}
+                className="p-2.5 rounded-md bg-[#1A1F26] hover:bg-[#202630] border border-[#252B33] text-[#9AA2AD] hover:text-[#F1F3F5] transition-colors"
+                title="Skip interval"
+              >
+                <SkipForward size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Quiet stats & Presets */}
+          <div className="space-y-6">
+            {/* Presets */}
+            <div className="app-card p-5 space-y-3">
+              <h3 className="text-xs font-medium text-[#9AA2AD]">
+                Presets
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Pomodoro', work: 25, rest: 5 },
+                  { label: 'Deep Work', work: 50, rest: 10 },
+                  { label: 'Extended', work: 90, rest: 15 },
+                  { label: 'Short Sprint', work: 15, rest: 3 }
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => {
+                      if (!isActive) {
+                        HudAudio.playClick();
+                        setCustomWork(preset.work);
+                        setCustomBreak(preset.rest);
+                      }
+                    }}
+                    disabled={isActive}
+                    className={`p-2.5 rounded-md text-left border transition-colors ${
+                      customWork === preset.work
+                        ? 'bg-[#1A1F26] border-[#22C7D9]/40 text-[#F1F3F5]'
+                        : 'bg-[#101318] border-[#252B33] text-[#9AA2AD] hover:border-[#323B46] hover:text-[#F1F3F5]'
+                    } ${isActive ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <div className="text-xs font-medium">{preset.work}m</div>
+                    <div className="text-[11px] text-[#68717D]">{preset.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quiet stats below */}
+            <div className="app-card p-5 space-y-3">
+              <h3 className="text-xs font-medium text-[#9AA2AD]">
+                Today
+              </h3>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between text-[#9AA2AD]">
+                  <span>Today</span>
+                  <span className="font-medium text-[#F1F3F5]">
+                    {totalHours}h {remainingMins}m
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[#9AA2AD]">
+                  <span>Sessions</span>
+                  <span className="font-medium text-[#F1F3F5]">
+                    {focusSessions.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[#9AA2AD]">
+                  <span>XP Earned</span>
+                  <span className="font-medium text-[#10B981]">
+                    +{totalFocusMins * 10} XP
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session History SubTab */}
+      {activeSubTab === 'history' && (
+        <div className="app-card p-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <h3 className="text-base font-semibold text-[#F1F3F5]">Session History</h3>
+              <p className="text-xs text-[#9AA2AD] mt-0.5">Chronological log of completed sessions</p>
+            </div>
+          </div>
+
+          {focusSessions.length === 0 ? (
+            <div className="py-12 text-center text-xs text-[#68717D]">
+              No focus sessions recorded yet today.
+            </div>
+          ) : (
+            <div className="divide-y divide-[#252B33]">
+              {focusSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="py-3 flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-md bg-[#1A1F26] border border-[#252B33] flex items-center justify-center text-[#22C7D9]">
+                      <FileText size={13} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-[#F1F3F5]">{session.task}</div>
+                      <div className="text-[11px] text-[#68717D]">{session.date}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-right">
+                    <span className="font-medium text-[#F1F3F5]">
+                      {session.minutes} mins
+                    </span>
+                    <span className="text-[11px] font-mono text-[#10B981]">
+                      +{session.minutes * 10} XP
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Timer Settings SubTab */}
+      {activeSubTab === 'settings' && (
+        <div className="app-card p-6 max-w-2xl space-y-6">
+          <div>
+            <h3 className="text-base font-semibold text-[#F1F3F5]">Timer Configuration</h3>
+            <p className="text-xs text-[#9AA2AD] mt-0.5">Customize durations and sound feedback</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-[#9AA2AD]">Work Duration</span>
+                <span className="font-medium text-[#F1F3F5]">{customWork} minutes</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="120"
+                step="5"
+                value={customWork}
+                disabled={isActive}
+                onChange={(e) => setCustomWork(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-[#9AA2AD]">Break Duration</span>
+                <span className="font-medium text-[#F1F3F5]">{customBreak} minutes</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="30"
+                step="1"
+                value={customBreak}
+                disabled={isActive}
+                onChange={(e) => setCustomBreak(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2 pt-3 border-t border-[#252B33]">
+              <div className="flex justify-between text-xs">
+                <span className="text-[#9AA2AD]">Audio Volume</span>
+                <span className="font-medium text-[#F1F3F5]">{Math.round(settings.volume * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={settings.volume}
+                onChange={(e) => updateSettings({ volume: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#252B33] text-xs">
+              <div>
+                <span className="text-[#F1F3F5] font-medium block">Audible Clock Tick</span>
+                <span className="text-[#68717D]">Subtle click every second</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.timerTickSound}
+                onChange={(e) => {
+                  HudAudio.playClick();
+                  updateSettings({ timerTickSound: e.target.checked });
+                }}
+                className="rounded border-[#252B33] text-[#22C7D9] h-4 w-4"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Data & Backup SubTab */}
+      {activeSubTab === 'backup' && (
+        <div className="app-card p-6 max-w-2xl space-y-6">
+          <div>
+            <h3 className="text-base font-semibold text-[#F1F3F5]">Data Management & Backup</h3>
+            <p className="text-xs text-[#9AA2AD] mt-0.5">
+              Export your local data or restore from a previous JSON backup
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <button
+                onClick={handleExportBackup}
+                className="btn-primary text-xs flex items-center gap-1.5"
+              >
+                {copied ? <Check size={13} /> : <Clipboard size={13} />}
+                <span>{copied ? 'Copied' : 'Export Backup'}</span>
+              </button>
+
+              <button
+                onClick={handleImportBackup}
+                disabled={!backupJson.trim()}
+                className="btn-secondary text-xs disabled:opacity-40"
+              >
+                Restore from JSON
               </button>
             </div>
 
-            {/* Custom durations */}
-            {!isActive ? (
-              <div className="space-y-3.5">
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400 font-bold">Focus Work: {customWork}m</span>
-                    <span className="text-cyber-cyan">Range: 10-120m</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="120"
-                    value={customWork}
-                    onChange={(e) => setCustomWork(parseInt(e.target.value))}
-                    className="w-full accent-cyber-cyan"
-                  />
-                </div>
+            <textarea
+              value={backupJson}
+              onChange={(e) => setBackupJson(e.target.value)}
+              placeholder="Paste exported JSON here to restore your data..."
+              rows={5}
+              className="w-full bg-[#101318] border border-[#252B33] rounded-md p-3 text-xs font-mono text-[#F1F3F5] outline-none focus:border-[#22C7D9]"
+            />
 
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400 font-bold">Rest Break: {customBreak}m</span>
-                    <span className="text-cyber-green">Range: 1-30m</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="30"
-                    value={customBreak}
-                    onChange={(e) => setCustomBreak(parseInt(e.target.value))}
-                    className="w-full accent-cyber-green"
-                  />
-                </div>
-
-                {/* Font Scaling */}
-                <div className="space-y-1.5 pt-1.5 border-t border-obsidian-light">
-                  <span className="text-gray-400 block font-bold">Font Size Scale</span>
-                  <div className="grid grid-cols-3 gap-1">
-                    {(['sm', 'md', 'lg'] as const).map((sz) => (
-                      <button
-                        key={sz}
-                        type="button"
-                        onClick={() => { HudAudio.playClick(); updateSettings({ fontSize: sz }); }}
-                        className={`py-1 border text-[9px] rounded uppercase cursor-pointer ${
-                          settings.fontSize === sz 
-                            ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5 font-bold' 
-                            : 'border-obsidian-light text-gray-500 hover:border-cyber-cyan/30 hover:text-gray-300'
-                        }`}
-                      >
-                        {sz}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Futuristic Fonts Switcher */}
-                <div className="space-y-1.5 pt-1.5 border-t border-obsidian-light">
-                  <span className="text-gray-400 block font-bold">Futuristic Fonts</span>
-                  <div className="grid grid-cols-3 gap-1">
-                    {([
-                      { id: 'fira', label: 'Fira Code' },
-                      { id: 'share-tech', label: 'Share Tech' },
-                      { id: 'orbitron', label: 'Orbitron' },
-                      { id: 'vt323', label: 'VT323' },
-                      { id: 'space-mono', label: 'Space Mono' },
-                      { id: 'jetbrains', label: 'JetBrains' }
-                    ] as const).map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => { HudAudio.playClick(); updateSettings({ fontFamily: f.id }); }}
-                        className={`py-1 border text-[8px] rounded uppercase cursor-pointer ${
-                          settings.fontFamily === f.id || (!settings.fontFamily && f.id === 'fira')
-                            ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5 font-bold' 
-                            : 'border-obsidian-light text-gray-500 hover:border-cyber-cyan/30 hover:text-gray-300'
-                        }`}
-                        title={f.label}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Vocabulary selector */}
-                <div className="space-y-1.5 pt-1.5 border-t border-obsidian-light">
-                  <span className="text-gray-400 block font-bold">Vocabulary Glossary Mode</span>
-                  <div className="grid grid-cols-3 gap-1">
-                    {(['cyberpunk', 'academic', 'personal'] as const).map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => { HudAudio.playClick(); updateSettings({ vocabulary: v }); }}
-                        className={`py-1 border text-[9px] rounded uppercase cursor-pointer ${
-                          settings.vocabulary === v 
-                            ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5 font-bold' 
-                            : 'border-obsidian-light text-gray-500 hover:border-cyber-cyan/30 hover:text-gray-300'
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Audio Master Volume */}
-                <div className="space-y-1.5 pt-1.5 border-t border-obsidian-light">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400 font-bold">Synthesizer Volume</span>
-                    <span className="text-cyber-cyan">{Math.round(settings.volume * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={settings.volume}
-                    onChange={(e) => updateSettings({ volume: parseFloat(e.target.value) })}
-                    className="w-full accent-cyber-cyan"
-                  />
-                </div>
-
-                {/* Clock Ticking Toggles */}
-                <div className="flex items-center justify-between pt-1 border-t border-obsidian-light">
-                  <span className="text-gray-400 font-bold">Timer Clock Beep Ticks</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.timerTickSound}
-                    onChange={(e) => { HudAudio.playClick(); updateSettings({ timerTickSound: e.target.checked }); }}
-                    className="rounded border-cyber-cyan text-cyber-cyan focus:ring-cyber-cyan h-4 w-4"
-                  />
-                </div>
-
-                {/* HUD Clock format */}
-                <div className="space-y-1.5 pt-2 border-t border-obsidian-light">
-                  <span className="text-gray-400 block font-bold">Clock Graphic layout</span>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => { HudAudio.playClick(); updateSettings({ timerMode: 'circular' }); }}
-                      className={`py-1.5 border rounded cursor-pointer ${
-                        settings.timerMode === 'circular'
-                          ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5 font-bold'
-                          : 'border-obsidian-light text-gray-500 hover:border-cyber-cyan/30 hover:text-gray-300'
-                      }`}
-                    >
-                      CIRCULAR HUD
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { HudAudio.playClick(); updateSettings({ timerMode: 'linear' }); }}
-                      className={`py-1.5 border rounded cursor-pointer ${
-                        settings.timerMode === 'linear'
-                          ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/5 font-bold'
-                          : 'border-obsidian-light text-gray-500 hover:border-cyber-cyan/30 hover:text-gray-300'
-                      }`}
-                    >
-                      LINEAR EQ
-                    </button>
-                  </div>
-                </div>
-
-                {/* DATABASE BACKUP AND MAINTENANCE RELOCATION */}
-                <div className="space-y-2 pt-2 border-t border-obsidian-light">
-                  <button
-                    type="button"
-                    onClick={() => { HudAudio.playClick(); setMaintenanceOpen(!maintenanceOpen); }}
-                    className="w-full py-1 bg-obsidian-light/30 border border-obsidian-light hover:border-cyber-cyan/40 text-gray-400 hover:text-white rounded flex items-center justify-center gap-1.5"
-                  >
-                    <Database size={10} /> {maintenanceOpen ? 'HIDE MAINTENANCE' : 'DATABASE MAINTENANCE'}
-                  </button>
-
-                  {maintenanceOpen && (
-                    <div className="space-y-2 pt-2 bg-obsidian-deep/50 p-2 rounded border border-obsidian-light/50">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleExportBackup}
-                          className="flex-1 py-1 bg-cyber-cyan/10 border border-cyber-cyan/20 hover:border-cyber-cyan text-cyber-cyan rounded flex items-center justify-center gap-1"
-                        >
-                          <Clipboard size={10} /> Export JSON
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleImportBackup}
-                          className="flex-1 py-1 bg-cyber-purple/10 border border-cyber-purple/20 hover:border-cyber-purple text-cyber-purple rounded flex items-center justify-center gap-1"
-                        >
-                          Restore State
-                        </button>
-                      </div>
-
-                      <textarea
-                        value={backupJson}
-                        onChange={(e) => setBackupJson(e.target.value)}
-                        placeholder="Paste backup state string to restore, or click Export JSON to generate config..."
-                        rows={3}
-                        className="w-full bg-obsidian-deep border border-cyber-cyan/15 rounded p-1 text-[8px] outline-none text-cyber-cyan"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => { if (confirm("Restore factory defaults? This clears history logs.")) resetToDefault(); }}
-                        className="w-full py-1 bg-cyber-pink/10 border border-cyber-pink/20 hover:border-cyber-pink text-cyber-pink rounded font-bold"
-                      >
-                        Reset Factory Database
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            ) : (
-              <div className="cyber-card p-5 rounded-lg border-cyber-cyan/10 text-center py-12 font-mono text-[10px] text-gray-500">
-                PAUSE THE TIMER SYSTEM TO ADJUST CONFIGURATION SCALARS.
-              </div>
-            )}
-
-          </div>
-        ) : (
-          /* Recent Focus sessions history panel */
-          <div className="cyber-card p-5 rounded-lg border-cyber-cyan/20 flex flex-col h-64 justify-between">
-            <div className="flex items-center justify-between border-b border-cyber-cyan/15 pb-2 mb-2">
-              <span className="font-mono text-xs text-cyber-cyan font-bold tracking-wider flex items-center gap-1.5">
-                <FileText size={12} /> Focus Session Logs
-              </span>
+            <div className="pt-4 border-t border-[#252B33]">
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to reset all data to default values?')) {
+                    resetToDefault();
+                  }
+                }}
+                className="text-xs text-[#EF4444] hover:underline"
+              >
+                Reset Database to Defaults
+              </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 font-mono text-[10px]">
-              {focusSessions.length === 0 ? (
-                <div className="text-gray-600 italic py-8 text-center">No recent focus periods.</div>
-              ) : (
-                focusSessions.map((fs) => (
-                  <div key={fs.id} className="p-2 border border-obsidian-light rounded bg-obsidian-deep/30 flex justify-between items-center">
-                    <div>
-                      <span className="text-white font-bold truncate max-w-[120px] block">{fs.task}</span>
-                      <span className="text-[8px] text-gray-500 block">Date: {fs.date}</span>
-                    </div>
-                    <span className="text-cyber-cyan font-bold font-semibold flex-shrink-0 text-right">
-                      +{fs.minutes}m
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Ambient sound synthesizer */}
-        <div className="cyber-card p-5 rounded-lg border-cyber-cyan/20 space-y-4">
-          <div className="flex items-center justify-between border-b border-cyber-cyan/15 pb-2">
-            <h4 className="font-mono text-xs text-cyber-cyan font-bold tracking-wider uppercase">
-              {getTranslation(settings.vocabulary, 'focusTitle')} Audio Core
-            </h4>
-            <Volume2 size={12} className="text-cyber-cyan animate-pulse" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 font-mono text-[10px]">
-            <button
-              onClick={() => { HudAudio.playClick(); HudAudio.stopNoise(); }}
-              className="py-1.5 border border-obsidian-light text-gray-500 hover:border-cyber-cyan/40 hover:text-gray-300 rounded cursor-pointer"
-            >
-              STOP NOISE
-            </button>
-            <button
-              onClick={() => { HudAudio.playClick(); HudAudio.startNoise('binaural'); }}
-              className="py-1.5 border border-obsidian-light text-gray-500 hover:border-cyber-cyan/40 hover:text-gray-300 rounded cursor-pointer"
-              title="Panned left/right theta focus wave loop"
-            >
-              THETA WAVE
-            </button>
-            <button
-              onClick={() => { HudAudio.playClick(); HudAudio.startNoise('synthwave'); }}
-              className="py-1.5 border border-obsidian-light text-gray-500 hover:border-cyber-cyan/40 hover:text-gray-300 rounded cursor-pointer"
-            >
-              SYNTHWAVE
-            </button>
-            <button
-              onClick={() => { HudAudio.playClick(); HudAudio.startNoise('rain'); }}
-              className="py-1.5 border border-obsidian-light text-gray-500 hover:border-cyber-cyan/40 hover:text-gray-300 rounded cursor-pointer"
-            >
-              CYBER-RAIN
-            </button>
-            <button
-              onClick={() => { HudAudio.playClick(); HudAudio.startNoise('white'); }}
-              className="py-1.5 border border-obsidian-light text-gray-500 hover:border-cyber-cyan/40 hover:text-gray-300 rounded cursor-pointer"
-            >
-              WHITE STATIC
-            </button>
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 }

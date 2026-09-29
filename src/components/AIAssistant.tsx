@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Sparkles, RefreshCw, AlertTriangle, Cpu, CornerDownLeft, Terminal } from 'lucide-react';
+import {
+  Send,
+  Sparkles,
+  RefreshCw,
+  AlertTriangle,
+  Bot,
+  User,
+  Trash2
+} from 'lucide-react';
 import { HudAudio } from '../utils/HudAudio';
 import { NexusState } from '../hooks/useNexusState';
 
@@ -23,8 +31,8 @@ export default function AIAssistant({ state, gainXP, writeLog }: AIAssistantProp
     {
       id: 'm_init',
       sender: 'ai',
-      text: `🤖 **REWIRE AI COGNITIVE CORE ONLINE**\n\nGreetings, Operator **${state.profile.name}**. I am your personal growth LLM helper. I have access to your telemetry (Level: ${state.profile.level}, Habits: ${state.habits.length} active, Directives: ${state.goals.length} active).\n\nHow can I optimize your routines or review your learning modules today?`,
-      timestamp: new Date().toLocaleTimeString().substring(0, 5)
+      text: `Hello, ${state.profile.name}. I am your personal thinking partner and copilot.\n\nI can analyze your productivity trends (Level ${state.profile.level}, ${state.habits.length} habits, ${state.goals.length} active directives), review writing, or help you structure your next deep focus block.\n\nWhat would you like to reflect on or work on today?`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [input, setInput] = useState('');
@@ -39,22 +47,25 @@ export default function AIAssistant({ state, gainXP, writeLog }: AIAssistantProp
 
   const presetDirectives = [
     {
-      label: "Optimize Habits",
-      prompt: "Review my habits and give me 3 specific scientific optimization tips to increase my streak completions. Here is my list: " + 
-        state.habits.map(h => `${h.name} (Streak: ${h.streak}d)`).join(", ")
+      label: 'Optimize Daily Routine',
+      prompt:
+        'Review my daily habits and give me 3 specific scientific optimization tips to increase my streak completions: ' +
+        state.habits.map((h) => `${h.name} (${h.streak}d streak)`).join(', ')
     },
     {
-      label: "Synthesize Focus Plan",
-      prompt: "I need to configure a high-efficiency focus schedule for today. Help me plan Pomodoro blocks for: " + 
-        (state.notes.find(n => n.pinned)?.title || "my daily tasks")
+      label: 'Plan Focus Schedule',
+      prompt:
+        'Help me structure a high-efficiency Pomodoro focus plan for today for: ' +
+        (state.notes.find((n) => n.pinned)?.title || 'my daily priorities')
     },
     {
-      label: "Writing Review",
-      prompt: "Act as an English coach and review the grammar, vocabulary richness, and overall style of this paragraph: "
+      label: 'Writing Style Review',
+      prompt:
+        'Act as an English coach and review the clarity, grammar, and vocabulary of this paragraph: '
     },
     {
-      label: "Status Analysis",
-      prompt: `Analyze my current status: Level ${state.profile.level}, total focus minutes ${state.profile.totalFocusMinutes || 0}, mood score average. Give me a brief hacker-style report on cognitive load.`
+      label: 'Productivity Pace Assessment',
+      prompt: `Analyze my progress: Level ${state.profile.level}, ${state.profile.totalFocusMinutes || 0} focus minutes logged. Give me a concise assessment of my rhythm and recovery.`
     }
   ];
 
@@ -62,7 +73,7 @@ export default function AIAssistant({ state, gainXP, writeLog }: AIAssistantProp
     if (!textToSend.trim() || loading) return;
 
     HudAudio.playClick();
-    const time = new Date().toLocaleTimeString().substring(0, 5);
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg: Message = {
       id: `user_${Date.now()}`,
       sender: 'user',
@@ -70,54 +81,56 @@ export default function AIAssistant({ state, gainXP, writeLog }: AIAssistantProp
       timestamp: time
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
     setApiKeyError(null);
 
-    // Formulate message history for the model, prepending a system prompt for structured formatting
     const systemPrompt = {
       role: 'system' as const,
-      content: `You are the Rewire AI Core, a helpful, friendly, and highly intelligent AI companion. 
-Maintain a conversational, natural, and human-like tone, being supportive and engaging.
-Keep your responses well-structured, clear, and easy to read. Always use markdown styling like headers, bold text, and bullet points where helpful.
-You can answer any normal queries, general knowledge questions, coding prompts, and productivity discussions. Do not limit yourself to the web page state or growth metrics, but feel free to reference them if relevant to the operator's query.`
+      content: `You are Rewire AI, an articulate, supportive, and sophisticated personal growth and productivity assistant. 
+Maintain a calm, thoughtful, grounded, and professional tone.
+Structure your answers clearly with markdown formatting, bullet points, and concise explanations.
+Answer questions accurately across personal development, software engineering, English language learning, and habit building.`
     };
 
-    const history = [systemPrompt, ...messages.concat(userMsg).map(m => ({
-      role: m.sender === 'user' ? 'user' as const : 'assistant' as const,
-      content: m.text
-    }))];
+    const history = [
+      systemPrompt,
+      ...messages.concat(userMsg).map((m) => ({
+        role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+        content: m.text
+      }))
+    ];
 
     try {
-      const response = await fetch('/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: history })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch AI answer');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server responded with ${res.status}`);
       }
 
-      setMessages(prev => [...prev, {
+      const data = await res.json();
+      const aiReply: Message = {
         id: `ai_${Date.now()}`,
         sender: 'ai',
-        text: data.content,
-        timestamp: new Date().toLocaleTimeString().substring(0, 5)
-      }]);
+        text: data.reply || 'No response generated.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
 
+      setMessages((prev) => [...prev, aiReply]);
       HudAudio.playSuccess();
       gainXP(20);
-      writeLog("AI Assistant: Synthesis response generated. +20 XP.", "success");
-
+      writeLog('Rewire AI: generated analysis response (+20 XP)', 'success');
     } catch (err: any) {
       console.error(err);
-      setApiKeyError(err.message || 'Server error communicating with AI core.');
+      setApiKeyError(err.message || 'Error communicating with AI service.');
       HudAudio.playAlert();
-      writeLog(`AI assistant interface error: ${err.message}`, 'alert');
+      writeLog(`AI assistant error: ${err.message}`, 'alert');
     } finally {
       setLoading(false);
     }
@@ -129,57 +142,58 @@ You can answer any normal queries, general knowledge questions, coding prompts, 
       {
         id: `m_init_${Date.now()}`,
         sender: 'ai',
-        text: `Rewire AI database registers flushed. Cognitive core ready for new prompts.`,
-        timestamp: new Date().toLocaleTimeString().substring(0, 5)
+        text: 'Chat history cleared. Ready for your next inquiry.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
     setApiKeyError(null);
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-      
-      {/* Side Control panel */}
-      <div className="cyber-card p-5 rounded-lg border-cyber-purple/20 space-y-4 lg:col-span-1">
-        <div className="flex items-center space-x-2 border-b border-cyber-purple/15 pb-2 text-cyber-purple font-bold tracking-wider font-mono text-xs">
-          <Cpu size={14} className="animate-pulse" />
-          <span>Core Telemetry</span>
-        </div>
-        
-        <div className="space-y-3 font-mono text-[10px] text-gray-400">
-          <div>
-            <span className="text-gray-600 block">Operator Biome</span>
-            <span className="text-white font-bold">{state.profile.name} (Lvl {state.profile.level})</span>
-          </div>
-          <div>
-            <span className="text-gray-600 block">Habit Synchronization</span>
-            <span className="text-cyber-cyan font-bold">{state.habits.filter(h => h.history.includes(new Date().toISOString().split('T')[0])).length} / {state.habits.length} Synced today</span>
-          </div>
-          <div>
-            <span className="text-gray-600 block">Active Directives</span>
-            <span className="text-cyber-green font-bold">{state.goals.length} Goals Registered</span>
-          </div>
-          <div>
-            <span className="text-gray-600 block">LLM Engine</span>
-            <span className="text-cyber-purple font-bold">Mistral API Node</span>
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start max-w-5xl mx-auto">
+      {/* Context & Quick Prompts Sidebar */}
+      <div className="app-card p-5 space-y-5 lg:col-span-1">
+        <div>
+          <h3 className="text-xs font-medium text-[#9AA2AD] mb-3">
+            System Context
+          </h3>
+          <div className="space-y-2 text-xs text-[#9AA2AD]">
+            <div className="flex justify-between">
+              <span className="text-[#68717D]">User</span>
+              <span className="font-medium text-[#F1F3F5]">{state.profile.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#68717D]">Level</span>
+              <span className="font-medium text-[#F1F3F5]">Level {state.profile.level}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#68717D]">Habits</span>
+              <span className="font-medium text-[#F1F3F5]">{state.habits.length} configured</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#68717D]">Goals</span>
+              <span className="font-medium text-[#F1F3F5]">{state.goals.length} active</span>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-obsidian-light pt-3 space-y-2">
-          <span className="font-mono text-[9px] text-gray-500 block uppercase font-bold tracking-widest">Preset Prompts</span>
+        <div className="pt-4 border-t border-[#252B33] space-y-2.5">
+          <span className="text-xs font-medium text-[#9AA2AD] block">
+            Suggested Prompts
+          </span>
           <div className="space-y-1.5">
             {presetDirectives.map((p, idx) => (
               <button
                 key={idx}
                 onClick={() => {
-                  if (p.label === "Writing Review") {
+                  if (p.label === 'Writing Style Review') {
                     setInput(p.prompt);
                     HudAudio.playClick();
                   } else {
                     handleSend(p.prompt);
                   }
                 }}
-                className="w-full text-left p-2 bg-obsidian-light/35 hover:bg-cyber-purple/10 border border-obsidian-light hover:border-cyber-purple/40 rounded font-mono text-[9px] text-gray-300 hover:text-cyber-purple transition-all duration-150 cursor-pointer truncate block"
+                className="w-full text-left p-2 rounded-md bg-[#101318] hover:bg-[#1A1F26] border border-[#252B33] hover:border-[#323B46] text-xs text-[#9AA2AD] hover:text-[#F1F3F5] transition-colors truncate block"
                 title={p.prompt}
               >
                 {p.label}
@@ -188,108 +202,133 @@ You can answer any normal queries, general knowledge questions, coding prompts, 
           </div>
         </div>
 
-        <button
-          onClick={handleClear}
-          className="w-full py-1.5 border border-cyber-pink/20 hover:border-cyber-pink bg-cyber-pink/5 hover:bg-cyber-pink/15 text-cyber-pink font-mono text-[9px] rounded uppercase font-bold tracking-widest cursor-pointer transition-colors"
-        >
-          Flush Chat Log
-        </button>
+        <div className="pt-3 border-t border-[#252B33]">
+          <button
+            onClick={handleClear}
+            className="w-full py-1.5 text-xs text-[#68717D] hover:text-[#EF4444] transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Trash2 size={13} />
+            <span>Clear conversation</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="cyber-card p-5 rounded-lg border-cyber-cyan/20 lg:col-span-3 flex flex-col h-[500px]">
+      <div className="app-card p-6 lg:col-span-3 flex flex-col h-[560px]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-cyber-cyan/15 pb-2 mb-4">
-          <div className="flex items-center space-x-2 font-mono text-xs text-cyber-cyan font-bold tracking-wider">
-            <Bot size={15} className="animate-bounce" />
-            <span>REWIRE AI OPERATOR TERMINAL</span>
+        <div className="flex items-center justify-between pb-3 border-b border-[#252B33] mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-[#8B5CF6]/10 flex items-center justify-center text-[#8B5CF6]">
+              <Sparkles size={14} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#F1F3F5]">Rewire AI</h3>
+              <p className="text-[11px] text-[#68717D]">Personal intelligence partner</p>
+            </div>
           </div>
-          <div className="flex items-center space-x-1.5 font-mono text-[9px]">
-            <span className="h-2 w-2 rounded-full bg-cyber-green animate-ping" />
-            <span className="text-gray-500 uppercase">SYS_LIVE</span>
+
+          <div className="flex items-center gap-1.5 text-xs text-[#10B981]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+            <span>Ready</span>
           </div>
         </div>
 
-        {/* API Key Missing Alert */}
+        {/* API key banner */}
         {apiKeyError && (
-          <div className="mb-4 p-3 bg-cyber-pink/10 border border-cyber-pink/35 text-cyber-pink rounded font-mono text-[10px] flex items-start gap-2 animate-pulse">
+          <div className="mb-4 p-3 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-md text-xs text-[#EF4444] flex items-start gap-2">
             <AlertTriangle className="flex-shrink-0 mt-0.5" size={14} />
-            <div className="space-y-1">
-              <span className="font-bold uppercase block">AI CORE INOPERABLE</span>
+            <div className="space-y-0.5">
+              <span className="font-semibold block">AI Service Notice</span>
               <p>{apiKeyError}</p>
-              <p className="text-gray-500 mt-1">To fix this, edit the `.env` or `.env.local` file in your project directory and set: <br /><code className="text-white font-bold select-all bg-black/45 px-1 py-0.5 rounded">MISTRAL_API_KEY=your_real_mistral_key</code></p>
+              <p className="text-[11px] text-[#9AA2AD] mt-1">
+                Configure your key in <code className="text-[#F1F3F5]">.env</code> as{' '}
+                <code className="text-[#22C7D9]">MISTRAL_API_KEY=...</code>
+              </p>
             </div>
           </div>
         )}
 
         {/* Message Thread */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 bg-obsidian-deep/50 p-3 rounded border border-obsidian-light/35 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 scrollbar-thin">
           {messages.map((m) => {
             const isUser = m.sender === 'user';
+
             return (
-              <div 
-                key={m.id} 
-                className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
+              <div
+                key={m.id}
+                className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="flex items-center space-x-1 font-mono text-[8px] text-gray-500">
-                  <span>{isUser ? 'OPERATOR' : 'NEXUS_AI'}</span>
-                  <span>•</span>
-                  <span>{m.timestamp}</span>
+                {!isUser && (
+                  <div className="w-7 h-7 rounded-full bg-[#1A1F26] border border-[#252B33] flex items-center justify-center text-[#8B5CF6] flex-shrink-0 mt-0.5">
+                    <Bot size={14} />
+                  </div>
+                )}
+
+                <div className={`space-y-1 max-w-[80%] ${isUser ? 'items-end' : ''}`}>
+                  <div
+                    className={`p-3.5 rounded-lg text-xs leading-relaxed whitespace-pre-wrap ${
+                      isUser
+                        ? 'bg-[#1A1F26] text-[#F1F3F5] border border-[#323B46]'
+                        : 'bg-[#101318] text-[#F1F3F5] border border-[#252B33]'
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                  <span className="text-[10px] text-[#68717D] block px-1">
+                    {m.timestamp}
+                  </span>
                 </div>
-                
-                <div 
-                  className={`max-w-[85%] rounded px-3 py-2 text-xs font-mono border transition-all whitespace-pre-wrap leading-relaxed ${
-                    isUser 
-                      ? 'bg-gradient-to-br from-cyber-cyan/15 to-cyber-cyan/5 border-cyber-cyan/35 text-cyber-cyan shadow-glow-cyan/5' 
-                      : 'bg-obsidian-light/60 border-obsidian-light/80 text-gray-200 shadow-[inset_0_0_12px_rgba(255,255,255,0.01)]'
-                  }`}
-                >
-                  {m.text}
-                </div>
+
+                {isUser && (
+                  <div className="w-7 h-7 rounded-full bg-[#1A1F26] border border-[#252B33] flex items-center justify-center text-[#9AA2AD] flex-shrink-0 mt-0.5">
+                    <User size={14} />
+                  </div>
+                )}
               </div>
             );
           })}
-          
+
           {loading && (
-            <div className="flex flex-col items-start space-y-1 animate-pulse">
-              <div className="flex items-center space-x-1 font-mono text-[8px] text-gray-500">
-                <span>NEXUS_AI</span>
-                <span>•</span>
-                <span>Synthesizing...</span>
+            <div className="flex gap-3">
+              <div className="w-7 h-7 rounded-full bg-[#1A1F26] border border-[#252B33] flex items-center justify-center text-[#8B5CF6] flex-shrink-0 mt-0.5">
+                <Bot size={14} />
               </div>
-              <div className="bg-obsidian-light/40 border border-cyber-purple/20 rounded px-3 py-2 text-xs font-mono text-cyber-purple flex items-center space-x-2">
-                <RefreshCw size={12} className="animate-spin" />
-                <span>Accessing API node...</span>
+              <div className="p-3 rounded-lg bg-[#101318] border border-[#252B33] text-xs text-[#9AA2AD] flex items-center gap-2">
+                <RefreshCw size={13} className="animate-spin text-[#22C7D9]" />
+                <span>Thinking...</span>
               </div>
             </div>
           )}
-          
+
           <div ref={bottomRef} />
         </div>
 
-        {/* Interactive Prompt Input */}
-        <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="flex items-center space-x-2 bg-obsidian-light/50 border border-cyber-cyan/25 rounded px-2.5 py-1.5 focus-within:border-cyber-cyan/50 transition-colors">
-          <Terminal size={14} className="text-cyber-cyan" />
+        {/* Input bar */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend(input);
+          }}
+          className="flex items-center gap-2 p-1.5 rounded-md bg-[#101318] border border-[#252B33] focus-within:border-[#22C7D9] transition-colors"
+        >
           <input
             type="text"
             value={input}
             disabled={loading}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={loading ? "System processing..." : "Query AI Core... (e.g. Optimize my daily habits)"}
-            className="flex-grow bg-transparent outline-none border-none text-cyber-cyan placeholder-cyber-cyan/35 text-xs font-mono font-semibold"
+            placeholder={loading ? 'Processing...' : 'Ask Rewire AI anything or request guidance...'}
+            className="flex-1 bg-transparent px-2.5 py-1.5 text-xs text-[#F1F3F5] placeholder-[#68717D] outline-none"
           />
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={!input.trim() || loading}
-            className={`p-1 rounded cursor-pointer transition-colors ${
-              input.trim() && !loading ? 'text-cyber-cyan hover:bg-cyber-cyan/15' : 'text-gray-600'
-            }`}
+            className="btn-primary text-xs py-1.5 px-3 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
           >
-            <Send size={14} />
+            <Send size={13} />
+            <span className="hidden sm:inline">Send</span>
           </button>
         </form>
       </div>
-
     </div>
   );
 }

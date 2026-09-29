@@ -24,11 +24,11 @@ export default function TerminalConsole({
 }: TerminalConsoleProps) {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([
-    'ReWriting Interactive CLI Terminal - Access Level: Operator',
-    'Type /help for a list of available subroutines.',
+    'ReWriting Core Terminal — Developer Shell',
+    'Type /help for available commands.',
     ''
   ]);
-  
+
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,36 +43,30 @@ export default function TerminalConsole({
     const cmd = input.trim();
     const args = cmd.split(' ');
     const mainCommand = args[0].toLowerCase();
-    
-    // Add command to terminal history
-    setHistory(prev => [...prev, `operator@nexus:~$ ${cmd}`]);
+
+    setHistory((prev) => [...prev, `$ ${cmd}`]);
 
     let output = '';
 
     switch (mainCommand) {
       case '/help':
-        output = `
-AVAILABLE HUD COMMANDS:
-  /help                             Display this firmware manual
-  /status                           Retrieve operator biome metrics
-  /xp add <amount>                  Synthesize custom XP values
-  /habit check <id_or_keyword>      Toggle daily sync state of a habit
-  /habit list                       Print active daily habit registers
-  /focus start <mins>               Jump to chamber and initialize focus
-  /clear                            Flush diagnostics console cache
-        `.trim();
+        output = `Available Commands:
+  /help                             Display command manual
+  /status                           System & user profile status
+  /xp add <amount>                  Add custom experience points
+  /habit check <id_or_keyword>      Toggle daily status of a habit
+  /habit list                       List active daily habits
+  /focus start <mins>               Jump to focus timer and begin
+  /clear                            Clear console window`.trim();
         break;
 
       case '/status':
-        output = `
-OPERATOR DIAGNOSTICS:
-  NAME:   ${state.profile.name}
-  LEVEL:  ${state.profile.level}
-  XP:     ${state.profile.xp} / ${state.profile.xpToNextLevel}
-  STATUS: ${state.profile.status}
-  HABITS: ${state.habits.length} configured
-  GOALS:  ${state.goals.length} active directives
-        `.trim();
+        output = `System Status:
+  User:     ${state.profile.name}
+  Level:    ${state.profile.level} (${state.profile.xp} / ${state.profile.xpToNextLevel} XP)
+  Status:   ${state.profile.status}
+  Habits:   ${state.habits.length} configured
+  Goals:    ${state.goals.length} active`.trim();
         break;
 
       case '/xp':
@@ -80,36 +74,45 @@ OPERATOR DIAGNOSTICS:
           const amt = parseInt(args[2]);
           if (!isNaN(amt)) {
             gainXP(amt);
-            output = `[SYS_OK] Synthesized +${amt} XP.`;
+            output = `✓ Granted +${amt} XP.`;
           } else {
-            output = `[ERR] XP quantity must be an integer. Usage: /xp add <value>`;
+            output = `Error: XP quantity must be an integer. Usage: /xp add <value>`;
           }
         } else {
-          output = `[ERR] Invalid argument. Usage: /xp add <amount>`;
+          output = `Error: Invalid argument. Usage: /xp add <amount>`;
         }
         break;
 
       case '/habit':
         if (args[1] === 'list') {
-          output = 'ACTIVE DAILY HABIT PROTOCOLS:\n' + state.habits.map((h, idx) => 
-            `  [${h.id}] ${h.name} (Streak: ${h.streak}d, ${h.history.includes(new Date().toISOString().split('T')[0]) ? 'COMPLETED' : 'PENDING'})`
-          ).join('\n');
+          output =
+            'Active Habits:\n' +
+            state.habits
+              .map(
+                (h) =>
+                  `  [${h.id}] ${h.name} (${h.streak}d streak, ${
+                    h.history.includes(new Date().toISOString().split('T')[0])
+                      ? 'Completed'
+                      : 'Pending'
+                  })`
+              )
+              .join('\n');
         } else if (args[1] === 'check' && args[2]) {
           const query = args.slice(2).join(' ').toLowerCase();
-          // Find by ID or Name contains
-          const match = state.habits.find(h => 
-            h.id.toLowerCase() === query || 
-            h.name.toLowerCase().includes(query)
+          const match = state.habits.find(
+            (h) =>
+              h.id.toLowerCase() === query ||
+              h.name.toLowerCase().includes(query)
           );
 
           if (match) {
             toggleHabit(match.id);
-            output = `[SYS_OK] Habit "${match.name}" synchronizing.`;
+            output = `✓ Habit "${match.name}" updated.`;
           } else {
-            output = `[ERR] Habit matching "${query}" not found. Type /habit list to view registers.`;
+            output = `Error: Habit matching "${query}" not found. Type /habit list to view habits.`;
           }
         } else {
-          output = `[ERR] Unknown argument. Usage: /habit list  or  /habit check <name>`;
+          output = `Error: Unknown argument. Usage: /habit list  or  /habit check <name>`;
         }
         break;
 
@@ -118,50 +121,53 @@ OPERATOR DIAGNOSTICS:
           const mins = parseInt(args[2]);
           if (!isNaN(mins) && mins > 0) {
             setActiveTab('focus');
-            // Save temporary query in localStorage so FocusChamber can read it on mount
             localStorage.setItem('nexus_trigger_focus_min', mins.toString());
-            output = `[SYS_OK] Relocating to focus chamber for ${mins} minutes.`;
-            writeLog(`TERMINAL TRIGGERS FOCUS SESSION: ${mins} mins`, 'info');
+            output = `✓ Initiating focus session for ${mins} minutes.`;
+            writeLog(`Focus session initiated: ${mins} mins`, 'info');
           } else {
-            output = `[ERR] Focus duration must be positive integer. Usage: /focus start <mins>`;
+            output = `Error: Focus duration must be positive integer. Usage: /focus start <mins>`;
           }
         } else {
-          output = `[ERR] Invalid focus call. Usage: /focus start <minutes>`;
+          output = `Error: Invalid syntax. Usage: /focus start <minutes>`;
         }
         break;
 
       case '/clear':
         onClearDiagnostics();
-        setHistory(['TERMINAL FLUSHED. Ready for new commands.', '']);
+        setHistory(['Terminal cleared. Ready for commands.', '']);
         setInput('');
         return;
 
       default:
-        output = `[ERR] Terminal: Unknown command "${mainCommand}". Type /help to query firmware commands.`;
+        output = `Error: Unknown command "${mainCommand}". Type /help for available commands.`;
         break;
     }
 
-    setHistory(prev => [...prev, ...output.split('\n'), '']);
+    setHistory((prev) => [...prev, ...output.split('\n'), '']);
     setInput('');
   };
 
   return (
-    <div className="cyber-card p-4 rounded-lg flex flex-col h-60 border-cyber-purple/20 font-mono text-[10px] text-gray-300">
+    <div className="p-4 flex flex-col h-64 bg-[#101318] border border-[#252B33] rounded-lg">
       {/* Header bar */}
-      <div className="flex items-center space-x-2 border-b border-cyber-purple/15 pb-2 mb-2 text-cyber-purple font-bold tracking-wider">
-        <Terminal size={14} className="animate-pulse" />
-        <span>ReWriting Terminal Console</span>
+      <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-[#252B33]">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#F1F3F5]">
+          <Terminal size={14} className="text-[#22C7D9]" />
+          <span>ReWriting Terminal</span>
+        </div>
+        <span className="font-mono text-[10px] text-[#68717D]">embedded shell</span>
       </div>
 
       {/* Terminal History */}
-      <div className="flex-1 overflow-y-auto space-y-1 pr-2 mb-2 bg-obsidian-deep/45 p-2 rounded border border-obsidian-light/30">
+      <div className="flex-1 overflow-y-auto space-y-1 pr-1 font-mono text-xs text-[#9AA2AD] leading-relaxed">
         {history.map((line, idx) => {
-          let color = 'text-gray-400';
-          if (line.startsWith('operator@nexus:~$')) color = 'text-cyber-cyan font-bold';
-          else if (line.startsWith('[SYS_OK]')) color = 'text-cyber-green';
-          else if (line.startsWith('[ERR]')) color = 'text-cyber-pink font-semibold';
-          else if (line.includes('AVAILABLE') || line.includes('DIAGNOSTICS')) color = 'text-cyber-purple font-semibold';
-          
+          let color = 'text-[#9AA2AD]';
+          if (line.startsWith('$')) color = 'text-[#22C7D9] font-medium';
+          else if (line.startsWith('✓')) color = 'text-[#10B981]';
+          else if (line.startsWith('Error:')) color = 'text-[#EF4444]';
+          else if (line.includes('Available Commands:') || line.includes('System Status:'))
+            color = 'text-[#F1F3F5] font-medium';
+
           return (
             <div key={idx} className={`whitespace-pre-wrap ${color}`}>
               {line}
@@ -172,17 +178,23 @@ OPERATOR DIAGNOSTICS:
       </div>
 
       {/* Input form */}
-      <form onSubmit={handleCommand} className="flex items-center space-x-2 bg-obsidian-light/50 border border-cyber-purple/25 rounded px-2 py-1">
-        <span className="text-cyber-cyan font-bold">nexus&gt;</span>
+      <form
+        onSubmit={handleCommand}
+        className="flex items-center gap-2 pt-2 border-t border-[#252B33] mt-1 font-mono text-xs"
+      >
+        <span className="text-[#22C7D9] font-medium">$</span>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Enter command... (e.g. /help)"
-          className="flex-1 bg-transparent outline-none border-none text-cyber-cyan placeholder-cyber-purple/40 text-[10px] font-mono font-semibold"
+          placeholder="Type command... (e.g. /help)"
+          className="flex-1 bg-transparent outline-none border-none text-[#F1F3F5] placeholder-[#68717D] text-xs font-mono"
         />
-        <button type="submit" className="text-cyber-purple hover:text-cyber-cyan transition-colors">
-          <CornerDownLeft size={12} />
+        <button
+          type="submit"
+          className="text-[#68717D] hover:text-[#22C7D9] transition-colors p-1"
+        >
+          <CornerDownLeft size={13} />
         </button>
       </form>
     </div>

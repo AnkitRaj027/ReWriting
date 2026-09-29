@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ReWriting MYself",
-  description: "Your futuristic personal growth dashboard. Track daily habits, manage focus sessions, write reflective notes, and learn English with your automated coach.",
+  title: "ReWriting Core — Personal Operating System",
+  description: "A sophisticated personal operating system for productivity, habits, learning, reflection, and personal growth.",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased dark">
-      <body className="min-h-full flex flex-col bg-obsidian-deep text-gray-200">
+      <body className="min-h-full flex flex-col bg-[#0B0D10] text-[#F1F3F5] selection:bg-[#22C7D9]/20 selection:text-[#22C7D9]">
         {children}
       </body>
     </html>
