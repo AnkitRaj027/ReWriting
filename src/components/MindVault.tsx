@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Plus,
@@ -9,7 +9,8 @@ import {
   Pin,
   Search,
   BookOpen,
-  Calendar
+  Calendar,
+  Check
 } from 'lucide-react';
 import { HudAudio } from '../utils/HudAudio';
 import { MoodEnergyLog, ReflectionLog, Note, HudSettings } from '../hooks/useNexusState';
@@ -56,6 +57,89 @@ export default function MindVault({
   const [noteContent, setNoteContent] = useState(notes[0]?.content || '');
   const [noteTags, setNoteTags] = useState(notes[0]?.tags || '');
   const [notePinned, setNotePinned] = useState(notes[0]?.pinned || false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'draft'>('saved');
+
+  const autoSaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isHydratedRef = useRef(false);
+
+  // 1. Restore drafts from localStorage on mount
+  useEffect(() => {
+    try {
+      // Restore section
+      const savedSection = localStorage.getItem('rw_mindvault_active_section');
+      if (savedSection && (savedSection === 'notebook' || savedSection === 'reflections' || savedSection === 'energy')) {
+        setActiveSection(savedSection as any);
+      }
+
+      // Restore reflections draft
+      const savedReflections = localStorage.getItem('rw_reflections_draft');
+      if (savedReflections) {
+        const parsed = JSON.parse(savedReflections);
+        if (parsed.wins !== undefined) setWins(parsed.wins);
+        if (parsed.errors !== undefined) setErrors(parsed.errors);
+        if (parsed.optimizations !== undefined) setOptimizations(parsed.optimizations);
+      }
+
+      // Restore notebook draft
+      const savedNoteDraft = localStorage.getItem('rw_mindvault_draft');
+      if (savedNoteDraft) {
+        const parsed = JSON.parse(savedNoteDraft);
+        if (parsed.noteTitle !== undefined) setNoteTitle(parsed.noteTitle);
+        if (parsed.noteContent !== undefined) setNoteContent(parsed.noteContent);
+        if (parsed.noteTags !== undefined) setNoteTags(parsed.noteTags);
+        if (parsed.notePinned !== undefined) setNotePinned(parsed.notePinned);
+        if (parsed.activeNoteId !== undefined) setActiveNoteId(parsed.activeNoteId);
+      }
+    } catch (e) {
+      console.warn('Failed to restore MindVault draft:', e);
+    }
+    isHydratedRef.current = true;
+  }, []);
+
+  // 2. Persist active section
+  useEffect(() => {
+    if (isHydratedRef.current) {
+      localStorage.setItem('rw_mindvault_active_section', activeSection);
+    }
+  }, [activeSection]);
+
+  // 3. Persist reflections draft on changes
+  useEffect(() => {
+    if (isHydratedRef.current) {
+      localStorage.setItem('rw_reflections_draft', JSON.stringify({ wins, errors, optimizations }));
+    }
+  }, [wins, errors, optimizations]);
+
+  // 4. Persist notebook draft & auto-save existing note
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+
+    // Save draft to localStorage so refresh/tab-switch never loses content
+    localStorage.setItem(
+      'rw_mindvault_draft',
+      JSON.stringify({ activeNoteId, noteTitle, noteContent, noteTags, notePinned })
+    );
+
+    // If editing an existing note, debounce auto-save directly to state
+    if (activeNoteId) {
+      setSaveStatus('saving');
+      if (autoSaveDebounceRef.current) {
+        clearTimeout(autoSaveDebounceRef.current);
+      }
+      autoSaveDebounceRef.current = setTimeout(() => {
+        editNote(activeNoteId, noteTitle, noteContent, noteTags, notePinned);
+        setSaveStatus('saved');
+      }, 800);
+    } else {
+      setSaveStatus('draft');
+    }
+
+    return () => {
+      if (autoSaveDebounceRef.current) {
+        clearTimeout(autoSaveDebounceRef.current);
+      }
+    };
+  }, [activeNoteId, noteTitle, noteContent, noteTags, notePinned]);
 
   // Rotating Prompt Sets
   const promptSets = [
@@ -85,6 +169,7 @@ export default function MindVault({
     setWins('');
     setErrors('');
     setOptimizations('');
+    localStorage.removeItem('rw_reflections_draft');
   };
 
   const handleSaveBiometrics = () => {
@@ -98,8 +183,11 @@ export default function MindVault({
 
     if (activeNoteId) {
       editNote(activeNoteId, noteTitle, noteContent, noteTags, notePinned);
+      setSaveStatus('saved');
     } else {
       addNote(noteTitle, noteContent, noteTags, notePinned);
+      setSaveStatus('saved');
+      localStorage.removeItem('rw_mindvault_draft');
     }
   };
 
@@ -110,6 +198,7 @@ export default function MindVault({
     setNoteContent('');
     setNoteTags('');
     setNotePinned(false);
+    localStorage.removeItem('rw_mindvault_draft');
   };
 
   const selectNote = (note: Note) => {
@@ -128,6 +217,7 @@ export default function MindVault({
       handleCreateNewNote();
     }
   };
+
 
   const filteredNotes = notes.filter(
     (n) =>
@@ -283,6 +373,21 @@ export default function MindVault({
                 />
 
                 <div className="flex items-center gap-2">
+                  {/* Auto-save / Draft Indicator */}
+                  <div className="text-[11px] hidden sm:flex items-center gap-1 font-medium mr-1">
+                    {saveStatus === 'saving' ? (
+                      <span className="text-[#9AA2AD] animate-pulse">Saving...</span>
+                    ) : saveStatus === 'saved' ? (
+                      <span className="text-[#10B981] flex items-center gap-1">
+                        <Check size={12} /> Saved
+                      </span>
+                    ) : (
+                      <span className="text-[#22C7D9] flex items-center gap-1">
+                        <Check size={12} /> Draft kept
+                      </span>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setNotePinned(!notePinned)}
@@ -315,6 +420,7 @@ export default function MindVault({
                     <span>Save</span>
                   </button>
                 </div>
+
               </div>
 
               <textarea

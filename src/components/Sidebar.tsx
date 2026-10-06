@@ -7,9 +7,7 @@ import {
   CheckSquare,
   Activity,
   Target,
-  GraduationCap,
   BookOpen,
-  Sparkles,
   User,
   Volume2,
   VolumeX,
@@ -20,6 +18,8 @@ import {
 } from 'lucide-react';
 import { HudAudio } from '../utils/HudAudio';
 import { Profile, HudSettings } from '../hooks/useNexusState';
+
+import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
   profile: Profile;
@@ -42,6 +42,7 @@ export default function Sidebar({
   isMobileOpen = false,
   setIsMobileOpen
 }: SidebarProps) {
+  const { user } = useAuth();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(profile.name);
   const [muted, setMuted] = useState(HudAudio.isMuted());
@@ -85,9 +86,7 @@ export default function Sidebar({
     {
       group: 'GROWTH & MIND',
       items: [
-        { id: 'vault', label: 'My Notebook & Journal', icon: BookOpen },
-        { id: 'english', label: 'English Coach', icon: GraduationCap },
-        { id: 'assistant', label: 'Rewire AI', icon: Sparkles }
+        { id: 'vault', label: 'My Notebook & Journal', icon: BookOpen }
       ]
     }
   ];
@@ -170,8 +169,12 @@ export default function Sidebar({
         <div className="p-2.5 rounded-lg bg-[#15191F] border border-[#252B33]">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-full bg-[#1A1F26] border border-[#252B33] flex items-center justify-center text-[11px] text-[#9AA2AD] flex-shrink-0">
-                <User size={12} />
+              <div className="w-6 h-6 rounded-full bg-[#1A1F26] border border-[#252B33] flex items-center justify-center text-[11px] text-[#9AA2AD] flex-shrink-0 overflow-hidden">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={12} />
+                )}
               </div>
               <div className="min-w-0">
                 {isEditingName ? (
@@ -203,7 +206,14 @@ export default function Sidebar({
                     {profile.name}
                   </button>
                 )}
-                <div className="text-[10px] text-[#68717D]">Level {profile.level}</div>
+                <div className="text-[10px] text-[#68717D] flex items-center gap-1.5">
+                  <span>Level {profile.level}</span>
+                  {user ? (
+                    <span className="text-[9px] text-[#10B981] bg-[#10B981]/10 px-1 rounded border border-[#10B981]/20">Google</span>
+                  ) : (
+                    <span className="text-[9px] text-[#9AA2AD] bg-[#15191F] px-1 rounded border border-[#252B33]">Guest</span>
+                  )}
+                </div>
               </div>
             </div>
 

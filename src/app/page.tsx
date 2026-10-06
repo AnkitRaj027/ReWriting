@@ -9,8 +9,6 @@ import HabitsView from '../components/HabitsView';
 import FocusChamber from '../components/FocusChamber';
 import MissionControl from '../components/MissionControl';
 import MindVault from '../components/MindVault';
-import EnglishCoach from '../components/EnglishCoach';
-import AIAssistant from '../components/AIAssistant';
 import { HudAudio } from '../utils/HudAudio';
 import { X, User } from 'lucide-react';
 
@@ -18,6 +16,9 @@ export default function Home() {
   const {
     isHydrated,
     state,
+    syncStatus,
+    lastSyncedAt,
+    manualCloudSync,
     toggleHabit,
     addHabit,
     deleteHabit,
@@ -103,11 +104,15 @@ export default function Home() {
           profile={state.profile}
           settings={state.settings}
           setIsMobileOpen={setIsMobileOpen}
+          updateSettings={updateSettings}
+          syncStatus={syncStatus}
+          lastSyncedAt={lastSyncedAt}
+          manualCloudSync={manualCloudSync}
         />
 
-        {/* Scrollable Viewport */}
+        {/* Scrollable Viewport - Tabs preserved mounted to retain user input & background timers */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto">
-          {activeTab === 'home' && (
+          <div className={activeTab === 'home' ? 'block' : 'hidden'}>
             <CommandCenter
               state={state}
               toggleHabit={toggleHabit}
@@ -116,9 +121,9 @@ export default function Home() {
               clearDiagnostics={clearDiagnostics}
               setActiveTab={setActiveTab}
             />
-          )}
+          </div>
 
-          {activeTab === 'habits' && (
+          <div className={activeTab === 'habits' ? 'block' : 'hidden'}>
             <HabitsView
               habits={state.habits}
               settings={state.settings}
@@ -126,9 +131,9 @@ export default function Home() {
               addHabit={addHabit}
               deleteHabit={deleteHabit}
             />
-          )}
+          </div>
 
-          {activeTab === 'focus' && (
+          <div className={activeTab === 'focus' ? 'block' : 'hidden'}>
             <FocusChamber
               settings={state.settings}
               focusSessions={state.focusSessions}
@@ -139,9 +144,9 @@ export default function Home() {
               importState={importState}
               resetToDefault={resetToDefault}
             />
-          )}
+          </div>
 
-          {activeTab === 'skills' && (
+          <div className={activeTab === 'skills' ? 'block' : 'hidden'}>
             <MissionControl
               goals={state.goals}
               settings={state.settings}
@@ -149,9 +154,9 @@ export default function Home() {
               addGoal={addGoal}
               deleteGoal={deleteGoal}
             />
-          )}
+          </div>
 
-          {activeTab === 'vault' && (
+          <div className={activeTab === 'vault' ? 'block' : 'hidden'}>
             <MindVault
               moodLogs={state.moodLogs}
               reflectionLogs={state.reflectionLogs}
@@ -163,16 +168,9 @@ export default function Home() {
               editNote={editNote}
               deleteNote={deleteNote}
             />
-          )}
-
-          {activeTab === 'english' && (
-            <EnglishCoach gainXP={gainXP} writeLog={writeLog} />
-          )}
-
-          {activeTab === 'assistant' && (
-            <AIAssistant state={state} gainXP={gainXP} writeLog={writeLog} />
-          )}
+          </div>
         </main>
+
       </div>
 
       {/* Welcome Setup Modal */}
